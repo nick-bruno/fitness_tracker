@@ -65,6 +65,8 @@ npm run seed
 | Validation | Zod (all POST/PUT request bodies) |
 | AI | `@anthropic-ai/sdk` — Claude API (server-side only) |
 | Dev runner | concurrently (both servers with one `npm run dev`) |
+| File upload | multer (memoryStorage) — NRC zip import |
+| Zip parsing | adm-zip — pure-JS, no native compilation |
 
 > **Why `node:sqlite` and not `better-sqlite3`?** `better-sqlite3` requires native compilation and fails on macOS 15 / Node 24 (`fatal error: 'climits' file not found`). The built-in `node:sqlite` module needs no compilation and has a nearly identical synchronous API.
 
@@ -81,9 +83,12 @@ exercise_muscle_groups  exercise_id, muscle_group_id, role ('primary'|'secondary
 workouts             id, title, logged_at (ISO-8601), notes
 workout_exercises    id, workout_id, exercise_id, sort_order
 sets                 id, workout_exercise_id, set_number, reps, weight_lb, rpe, notes
+runs                 id, type ('run'|'row'), title, logged_at, distance_miles, duration_seconds, notes, source, external_id
 ```
 
 Seed data: ~33 muscle groups (6 top-level, ~27 sub-muscles) and ~63 exercises. Run once with `npm run seed`.
+
+`runs.external_id` has a partial unique index (`WHERE external_id IS NOT NULL`) for NRC import deduplication.
 
 ---
 
@@ -104,8 +109,15 @@ Seed data: ~33 muscle groups (6 top-level, ~27 sub-muscles) and ~63 exercises. R
 | DELETE | `/api/workouts/:id` | Delete workout |
 | GET | `/api/workouts/muscle-summary` | Per-muscle set counts for a lookback window |
 | POST | `/api/recommendations` | Generate AI recommendation (calls Claude) |
+| GET | `/api/runs` | Paginated run/row history (`?limit=&offset=&from=&to=&type=`) |
+| GET | `/api/runs/summary` | Weekly totals (`?days=&type=`) |
+| GET | `/api/runs/:id` | Single run/row detail |
+| POST | `/api/runs` | Log a run or row |
+| PUT | `/api/runs/:id` | Edit existing run/row |
+| DELETE | `/api/runs/:id` | Delete run/row |
+| POST | `/api/runs/import/nrc` | Import NRC `.zip` export (multipart/form-data) |
 
-> **Route order matters:** `/api/workouts/muscle-summary` must be registered before `/api/workouts/:id` in Express to prevent "muscle-summary" being parsed as a numeric ID.
+> **Route order matters:** `/api/workouts/muscle-summary` must be registered before `/api/workouts/:id`, and `/api/runs/import/nrc` must be registered before `/api/runs/:id` in Express to prevent the literal path segment being parsed as a numeric ID.
 
 ---
 
@@ -113,12 +125,20 @@ Seed data: ~33 muscle groups (6 top-level, ~27 sub-muscles) and ~63 exercises. R
 
 | Page | Route | Description |
 |---|---|---|
-| Dashboard | `/` | Weekly summary, last 3 workouts, muscle heatmap |
+| Dashboard | `/` | Weekly summary (strength + running + rowing), last 3 workouts, muscle heatmap |
 | Exercise Library | `/exercises` | Search + filter by muscle group / equipment |
 | Log Workout | `/log` | Create a new workout with drag-to-reorder exercises and inline set entry |
 | Edit Workout | `/log/:workoutId` | Pre-populates form from existing workout |
 | Workout History | `/history` | Paginated list with date range filter |
 | Recommendations | `/recommendations` | Goal selector → Claude AI suggestion |
+| Log Run | `/log-run` | Log a running activity (distance + duration) |
+| Edit Run | `/log-run/:cardioId` | Edit an existing run |
+| Run History | `/runs` | Paginated run list with weekly summary + NRC zip import |
+| Log Row | `/log-row` | Log a rowing activity |
+| Edit Row | `/log-row/:cardioId` | Edit an existing row |
+| Row History | `/rows` | Paginated row list with weekly summary |
+
+`LogCardioPage` and `CardioHistoryPage` are shared components parameterized by `activityType: 'run' | 'row'`.
 
 ---
 
@@ -154,5 +174,6 @@ Recommendations are stateless and not persisted to the database.
 
 - **`node:sqlite` typing:** Query results must be cast with `as unknown as TargetType`. Named params must be typed as `Record<string, string | number | null | bigint>` — the driver rejects `unknown`. Every named param in the object must appear in the SQL string, or the driver throws "Unknown named parameter".
 - **DB path:** Always resolved relative to `__dirname` in `db.ts` (not `process.cwd()`) so the path is correct regardless of which directory the server is started from.
-- **Migrations:** Two applied at startup — (1) add `title` column to `workouts`, (2) rename `weight_kg` → `weight_lb` in `sets`.
+- **Migrations:** Applied at startup — (1) add `title` to `workouts`, (2) rename `weight_kg` → `weight_lb` in `sets`, (3) add `type` to `runs`, (4) add `source` + `external_id` to `runs`.
 - **`LogWorkoutPage`** is the most complex component: local `ExerciseBlock[]` state manages the full form, `@dnd-kit` handles drag-to-reorder, and sets are filtered (must have reps or weight) before the payload is built.
+- **NRC import:** Uses `adm-zip` (pure-JS, no native compilation) + `multer` memoryStorage. Parses `activities/*.json` from the Nike data export zip. Distance converted from km, duration from ms. Deduplicates via `external_id`. Non-fatal per-file errors are collected and returned without aborting the whole import. The `importNrcRuns` client function uses raw `FormData` — do NOT set `Content-Type` manually (browser must set the multipart boundary).
