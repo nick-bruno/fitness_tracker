@@ -6,6 +6,10 @@ import type {
   MuscleVolumeSummary,
   RecommendationResponse,
   WorkoutCreateInput,
+  Run,
+  RunCreateInput,
+  RunWeeklySummary,
+  NrcImportResult,
 } from '../types';
 
 const BASE = '/api';
@@ -84,6 +88,44 @@ export const fetchMuscleSummary = (days: number) =>
   request<{ summary: MuscleVolumeSummary[] }>(`/workouts/muscle-summary?days=${days}`).then(
     (r) => r.summary,
   );
+
+// Runs
+export const fetchRuns = (params: { limit?: number; offset?: number; from?: string; to?: string; type?: string }) => {
+  const qs = new URLSearchParams();
+  if (params.limit != null) qs.set('limit', String(params.limit));
+  if (params.offset != null) qs.set('offset', String(params.offset));
+  if (params.from) qs.set('from', params.from);
+  if (params.to) qs.set('to', params.to);
+  if (params.type) qs.set('type', params.type);
+  return request<{ runs: Run[]; total: number }>(`/runs?${qs}`);
+};
+
+export const fetchRun = (id: number) =>
+  request<{ run: Run }>(`/runs/${id}`).then((r) => r.run);
+
+export const createRun = (data: RunCreateInput) =>
+  request<{ run: Run }>('/runs', { method: 'POST', ...json(data) }).then((r) => r.run);
+
+export const updateRun = (id: number, data: RunCreateInput) =>
+  request<{ run: Run }>(`/runs/${id}`, { method: 'PUT', ...json(data) }).then((r) => r.run);
+
+export const deleteRun = (id: number) =>
+  request<{ success: boolean }>(`/runs/${id}`, { method: 'DELETE' });
+
+export const fetchRunsSummary = (days: number, type: 'run' | 'row') =>
+  request<{ summary: RunWeeklySummary }>(`/runs/summary?days=${days}&type=${type}`).then((r) => r.summary);
+
+export const importNrcRuns = async (file: File): Promise<NrcImportResult> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  // Do NOT set Content-Type — browser must set multipart/form-data boundary automatically
+  const res = await fetch(`${BASE}/runs/import/nrc`, { method: 'POST', body: formData });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+    throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
+  }
+  return res.json() as Promise<NrcImportResult>;
+};
 
 // Recommendations
 export const fetchRecommendation = (goals: string[], lookback_days: number) =>

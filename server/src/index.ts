@@ -10,6 +10,8 @@ import muscleGroupsRouter from './routes/muscleGroups';
 import exercisesRouter from './routes/exercises';
 import workoutsRouter from './routes/workouts';
 import recommendationsRouter from './routes/recommendations';
+import runsRouter from './routes/runs';
+import nrcImportRouter from './routes/nrcImport';
 
 const app = express();
 const PORT = parseInt(process.env.PORT ?? '3001');
@@ -21,6 +23,8 @@ app.use('/api/muscle-groups', muscleGroupsRouter);
 app.use('/api/exercises', exercisesRouter);
 app.use('/api/workouts', workoutsRouter);
 app.use('/api/recommendations', recommendationsRouter);
+app.use('/api/runs/import/nrc', nrcImportRouter);
+app.use('/api/runs', runsRouter);
 
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err.stack);

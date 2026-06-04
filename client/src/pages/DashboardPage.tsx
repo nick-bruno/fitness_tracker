@@ -1,13 +1,24 @@
 import { useNavigate } from 'react-router-dom';
 import { useWorkouts, useMuscleSummary } from '../hooks/useWorkouts';
+import { useRunsSummary } from '../hooks/useRuns';
 import WorkoutSummaryCard from '../components/workout/WorkoutSummaryCard';
 import MuscleHeatmap from '../components/recommendations/MuscleHeatmap';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
+
+function formatPace(durationSeconds: number, distanceMiles: number): string {
+  if (distanceMiles === 0) return '--';
+  const paceSeconds = durationSeconds / distanceMiles;
+  const m = Math.floor(paceSeconds / 60);
+  const s = Math.round(paceSeconds % 60);
+  return `${m}:${String(s).padStart(2, '0')}/mi`;
+}
 
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { data: workoutsData, isLoading: loadingWorkouts } = useWorkouts({ limit: 3, offset: 0 });
   const { data: muscleSummary, isLoading: loadingMuscles } = useMuscleSummary(7);
+  const { data: runSummary } = useRunsSummary(7, 'run');
+  const { data: rowSummary } = useRunsSummary(7, 'row');
 
   const workouts = workoutsData?.workouts ?? [];
   const thisWeekWorkouts = workouts.filter((w) => {
@@ -30,21 +41,74 @@ export default function DashboardPage() {
         </button>
       </div>
 
-      {/* Stats row */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="rounded-xl border border-gray-800 bg-gray-900 p-4 text-center">
-          <p className="text-3xl font-bold text-indigo-400">{thisWeekWorkouts.length}</p>
-          <p className="mt-1 text-xs text-gray-500">Workouts this week</p>
+      {/* Strength stats */}
+      <div>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">This Week — Strength</p>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="rounded-xl border border-gray-800 bg-gray-900 p-4 text-center">
+            <p className="text-3xl font-bold text-indigo-400">{thisWeekWorkouts.length}</p>
+            <p className="mt-1 text-xs text-gray-500">Workouts</p>
+          </div>
+          <div className="rounded-xl border border-gray-800 bg-gray-900 p-4 text-center">
+            <p className="text-3xl font-bold text-indigo-400">
+              {thisWeekWorkouts.reduce((sum, w) => sum + w.total_sets, 0)}
+            </p>
+            <p className="mt-1 text-xs text-gray-500">Total sets</p>
+          </div>
+          <div className="rounded-xl border border-gray-800 bg-gray-900 p-4 text-center">
+            <p className="text-3xl font-bold text-indigo-400">{workoutsData?.total ?? 0}</p>
+            <p className="mt-1 text-xs text-gray-500">Total workouts logged</p>
+          </div>
         </div>
-        <div className="rounded-xl border border-gray-800 bg-gray-900 p-4 text-center">
-          <p className="text-3xl font-bold text-indigo-400">
-            {thisWeekWorkouts.reduce((sum, w) => sum + w.total_sets, 0)}
-          </p>
-          <p className="mt-1 text-xs text-gray-500">Total sets this week</p>
+      </div>
+
+      {/* Running stats */}
+      <div>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">This Week — Running</p>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="rounded-xl border border-gray-800 bg-gray-900 p-4 text-center">
+            <p className="text-3xl font-bold text-emerald-400">{runSummary?.total_runs ?? 0}</p>
+            <p className="mt-1 text-xs text-gray-500">Runs</p>
+          </div>
+          <div className="rounded-xl border border-gray-800 bg-gray-900 p-4 text-center">
+            <p className="text-3xl font-bold text-emerald-400">
+              {(runSummary?.total_miles ?? 0).toFixed(1)}
+            </p>
+            <p className="mt-1 text-xs text-gray-500">Miles</p>
+          </div>
+          <div className="rounded-xl border border-gray-800 bg-gray-900 p-4 text-center">
+            <p className="text-3xl font-bold text-emerald-400">
+              {runSummary && runSummary.total_runs > 0
+                ? formatPace(runSummary.total_seconds, runSummary.total_miles)
+                : '--'}
+            </p>
+            <p className="mt-1 text-xs text-gray-500">Avg pace</p>
+          </div>
         </div>
-        <div className="rounded-xl border border-gray-800 bg-gray-900 p-4 text-center">
-          <p className="text-3xl font-bold text-indigo-400">{workoutsData?.total ?? 0}</p>
-          <p className="mt-1 text-xs text-gray-500">Total workouts logged</p>
+      </div>
+
+      {/* Rowing stats */}
+      <div>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">This Week — Rowing</p>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="rounded-xl border border-gray-800 bg-gray-900 p-4 text-center">
+            <p className="text-3xl font-bold text-sky-400">{rowSummary?.total_runs ?? 0}</p>
+            <p className="mt-1 text-xs text-gray-500">Rows</p>
+          </div>
+          <div className="rounded-xl border border-gray-800 bg-gray-900 p-4 text-center">
+            <p className="text-3xl font-bold text-sky-400">
+              {(rowSummary?.total_miles ?? 0).toFixed(1)}
+            </p>
+            <p className="mt-1 text-xs text-gray-500">Miles</p>
+          </div>
+          <div className="rounded-xl border border-gray-800 bg-gray-900 p-4 text-center">
+            <p className="text-3xl font-bold text-sky-400">
+              {rowSummary && rowSummary.total_runs > 0
+                ? formatPace(rowSummary.total_seconds, rowSummary.total_miles)
+                : '--'}
+            </p>
+            <p className="mt-1 text-xs text-gray-500">Avg pace</p>
+          </div>
         </div>
       </div>
 

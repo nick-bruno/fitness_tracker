@@ -61,6 +61,34 @@ db.exec(`
   );
 `);
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS runs (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    title            TEXT,
+    logged_at        TEXT NOT NULL DEFAULT (datetime('now')),
+    distance_miles   REAL NOT NULL,
+    duration_seconds INTEGER NOT NULL,
+    notes            TEXT
+  );
+`);
+
+// Add type column to runs for activity discrimination (run vs row)
+const runCols = db.prepare("PRAGMA table_info(runs)").all() as unknown as { name: string }[];
+if (!runCols.some((c) => c.name === 'type')) {
+  db.exec("ALTER TABLE runs ADD COLUMN type TEXT NOT NULL DEFAULT 'run'");
+}
+if (!runCols.some((c) => c.name === 'source')) {
+  db.exec("ALTER TABLE runs ADD COLUMN source TEXT NOT NULL DEFAULT 'manual'");
+}
+if (!runCols.some((c) => c.name === 'external_id')) {
+  db.exec('ALTER TABLE runs ADD COLUMN external_id TEXT');
+}
+// Partial unique index — allows multiple NULLs, enforces uniqueness only where external_id is set
+db.exec(`
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_runs_external_id
+  ON runs (external_id) WHERE external_id IS NOT NULL
+`);
+
 // Add title column to workouts if it doesn't exist yet (one-time migration)
 const workoutCols = db.prepare("PRAGMA table_info(workouts)").all() as unknown as { name: string }[];
 if (!workoutCols.some((c) => c.name === 'title')) {

@@ -59,6 +59,41 @@ export interface WorkoutSummary {
   exercise_names: string[];
 }
 
+export interface Run {
+  id: number;
+  type: 'run' | 'row';
+  title: string | null;
+  logged_at: string;
+  distance_miles: number;
+  duration_seconds: number;
+  notes: string | null;
+  source: string;
+  external_id: string | null;
+}
+
+export interface RunCreateInput {
+  type: 'run' | 'row';
+  title?: string;
+  logged_at?: string;
+  distance_miles: number;
+  duration_seconds: number;
+  notes?: string;
+  source?: string;
+  external_id?: string;
+}
+
+export interface NrcImportResult {
+  imported: number;
+  skipped: number;
+  errors: string[];
+}
+
+export interface RunWeeklySummary {
+  total_runs: number;
+  total_miles: number;
+  total_seconds: number;
+}
+
 export interface MuscleVolumeSummary {
   muscle_group_name: string;
   parent_name: string | null;

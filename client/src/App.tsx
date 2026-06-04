@@ -5,6 +5,8 @@ import ExerciseLibraryPage from './pages/ExerciseLibraryPage';
 import LogWorkoutPage from './pages/LogWorkoutPage';
 import WorkoutHistoryPage from './pages/WorkoutHistoryPage';
 import RecommendationsPage from './pages/RecommendationsPage';
+import LogCardioPage from './pages/LogCardioPage';
+import CardioHistoryPage from './pages/CardioHistoryPage';
 
 export default function App() {
   return (
@@ -18,6 +20,12 @@ export default function App() {
           <Route path="/log/:workoutId" element={<LogWorkoutPage />} />
           <Route path="/history" element={<WorkoutHistoryPage />} />
           <Route path="/recommendations" element={<RecommendationsPage />} />
+          <Route path="/log-run" element={<LogCardioPage activityType="run" />} />
+          <Route path="/log-run/:cardioId" element={<LogCardioPage activityType="run" />} />
+          <Route path="/runs" element={<CardioHistoryPage activityType="run" />} />
+          <Route path="/log-row" element={<LogCardioPage activityType="row" />} />
+          <Route path="/log-row/:cardioId" element={<LogCardioPage activityType="row" />} />
+          <Route path="/rows" element={<CardioHistoryPage activityType="row" />} />
         </Routes>
       </AppShell>
     </BrowserRouter>
