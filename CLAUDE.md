@@ -2,6 +2,8 @@
 
 A personal, single-user fitness tracking web app with AI-powered workout recommendations via the Claude API.
 
+**Last active session:** 2026-06-04
+
 ---
 
 ## Running the App
