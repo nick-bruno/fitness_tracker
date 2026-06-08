@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import type { Exercise } from '../../types';
-import { useExercises } from '../../hooks/useExercises';
+import { useState, useMemo } from 'react';
+import type { Exercise, MuscleGroup } from '../../types';
+import { useExercises, useMuscleGroups } from '../../hooks/useExercises';
 import ExerciseSearchBar from '../exercises/ExerciseSearchBar';
 import ExerciseCard from '../exercises/ExerciseCard';
 import LoadingSpinner from '../shared/LoadingSpinner';
@@ -10,9 +10,46 @@ interface Props {
   onClose: () => void;
 }
 
+type ChipDef =
+  | { label: string; kind: 'parent'; id: number }
+  | { label: string; kind: 'subset'; parentId: number; match: RegExp };
+
+function buildChips(groups: MuscleGroup[]): ChipDef[] {
+  return groups.flatMap((g): ChipDef[] => {
+    if (g.name === 'Arms') {
+      return [
+        { label: 'Biceps', kind: 'subset', parentId: g.id, match: /bicep|brachialis/i },
+        { label: 'Triceps', kind: 'subset', parentId: g.id, match: /tricep/i },
+      ];
+    }
+    return [{ label: g.name, kind: 'parent', id: g.id }];
+  });
+}
+
 export default function AddExerciseModal({ onSelect, onClose }: Props) {
   const [search, setSearch] = useState('');
-  const { data: exercises, isLoading } = useExercises({ search });
+  const [activeChip, setActiveChip] = useState<ChipDef | undefined>();
+
+  const { data: muscleGroups } = useMuscleGroups();
+  const chips = useMemo(() => buildChips(muscleGroups ?? []), [muscleGroups]);
+
+  const fetchMuscleGroupId =
+    activeChip?.kind === 'parent' ? activeChip.id :
+    activeChip?.kind === 'subset' ? activeChip.parentId :
+    undefined;
+
+  const { data: rawExercises, isLoading } = useExercises({ search, muscleGroupId: fetchMuscleGroupId });
+
+  const exercises = useMemo(() => {
+    if (!rawExercises || activeChip?.kind !== 'subset') return rawExercises;
+    return rawExercises.filter((ex) =>
+      ex.muscles.some((m) => activeChip.match.test(m.muscle_group_name)),
+    );
+  }, [rawExercises, activeChip]);
+
+  const handleChipClick = (chip: ChipDef) => {
+    setActiveChip((prev) => (prev?.label === chip.label ? undefined : chip));
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
@@ -22,8 +59,26 @@ export default function AddExerciseModal({ onSelect, onClose }: Props) {
           <button onClick={onClose} className="text-gray-500 hover:text-gray-300">✕</button>
         </div>
 
-        <div className="px-5 py-3">
+        <div className="space-y-2 px-5 pt-3 pb-2">
           <ExerciseSearchBar value={search} onChange={setSearch} />
+
+          {chips.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {chips.map((chip) => (
+                <button
+                  key={chip.label}
+                  onClick={() => handleChipClick(chip)}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                    activeChip?.label === chip.label
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200'
+                  }`}
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 pb-5">

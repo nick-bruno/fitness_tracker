@@ -68,13 +68,13 @@ export function listExercises(opts: {
   }
   if (opts.muscleGroupId != null && opts.role) {
     conditions.push(
-      'e.id IN (SELECT exercise_id FROM exercise_muscle_groups WHERE muscle_group_id = $mgId AND role = $role)',
+      'e.id IN (SELECT emg.exercise_id FROM exercise_muscle_groups emg JOIN muscle_groups mg ON mg.id = emg.muscle_group_id WHERE (mg.id = $mgId OR mg.parent_id = $mgId) AND emg.role = $role)',
     );
     params['mgId'] = opts.muscleGroupId;
     params['role'] = opts.role;
   } else if (opts.muscleGroupId != null) {
     conditions.push(
-      'e.id IN (SELECT exercise_id FROM exercise_muscle_groups WHERE muscle_group_id = $mgId)',
+      'e.id IN (SELECT emg.exercise_id FROM exercise_muscle_groups emg JOIN muscle_groups mg ON mg.id = emg.muscle_group_id WHERE mg.id = $mgId OR mg.parent_id = $mgId)',
     );
     params['mgId'] = opts.muscleGroupId;
   }
