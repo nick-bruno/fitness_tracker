@@ -3,6 +3,8 @@ import { useWorkouts, useMuscleSummary } from '../hooks/useWorkouts';
 import { useRunsSummary } from '../hooks/useRuns';
 import WorkoutSummaryCard from '../components/workout/WorkoutSummaryCard';
 import MuscleHeatmap from '../components/recommendations/MuscleHeatmap';
+import BodySilhouette from '../components/dashboard/BodySilhouette';
+import WeeklyGoalsCard from '../components/dashboard/WeeklyGoalsCard';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
 
 function formatPace(durationSeconds: number, distanceMiles: number): string {
@@ -112,6 +114,9 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Weekly goals */}
+      <WeeklyGoalsCard />
+
       {/* Muscle heatmap */}
       <div className="rounded-xl border border-gray-800 bg-gray-900 p-5">
         <h2 className="mb-4 font-semibold text-gray-200">7-Day Muscle Coverage</h2>
@@ -120,7 +125,12 @@ export default function DashboardPage() {
             <LoadingSpinner />
           </div>
         ) : (
-          <MuscleHeatmap summary={muscleSummary ?? []} />
+          <>
+            <MuscleHeatmap summary={muscleSummary ?? []} />
+            <div className="mt-6">
+              <BodySilhouette summary={muscleSummary ?? []} />
+            </div>
+          </>
         )}
       </div>
 

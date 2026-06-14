@@ -12,6 +12,7 @@ import workoutsRouter from './routes/workouts';
 import recommendationsRouter from './routes/recommendations';
 import runsRouter from './routes/runs';
 import nrcImportRouter from './routes/nrcImport';
+import goalsRouter from './routes/goals';
 
 const app = express();
 const PORT = parseInt(process.env.PORT ?? '3001');
@@ -25,6 +26,7 @@ app.use('/api/workouts', workoutsRouter);
 app.use('/api/recommendations', recommendationsRouter);
 app.use('/api/runs/import/nrc', nrcImportRouter);
 app.use('/api/runs', runsRouter);
+app.use('/api/goals', goalsRouter);
 
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err.stack);

@@ -101,4 +101,33 @@ if (cols.some((c) => c.name === 'weight_kg')) {
   db.exec('ALTER TABLE sets RENAME COLUMN weight_kg TO weight_lb');
 }
 
+// Add location column to workouts (one-time migration)
+if (!workoutCols.some((c) => c.name === 'location')) {
+  db.exec('ALTER TABLE workouts ADD COLUMN location TEXT');
+}
+
+// Goals table — single row (id=1) storing the user's default targets
+db.exec(`
+  CREATE TABLE IF NOT EXISTS goals (
+    id             INTEGER PRIMARY KEY,
+    strength_goal  INTEGER NOT NULL DEFAULT 4,
+    cardio_goal    INTEGER NOT NULL DEFAULT 3
+  )
+`);
+const hasGoalRow = db.prepare('SELECT id FROM goals WHERE id = 1').get();
+if (!hasGoalRow) {
+  db.prepare('INSERT INTO goals (id, strength_goal, cardio_goal) VALUES (1, 4, 3)').run();
+}
+
+// Per-week goal history — one row per Mon–Sun week
+db.exec(`
+  CREATE TABLE IF NOT EXISTS weekly_goals (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    week_start    TEXT NOT NULL UNIQUE,
+    week_end      TEXT NOT NULL,
+    strength_goal INTEGER NOT NULL,
+    cardio_goal   INTEGER NOT NULL
+  )
+`);
+
 export default db;

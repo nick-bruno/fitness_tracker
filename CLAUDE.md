@@ -2,7 +2,7 @@
 
 A personal, single-user fitness tracking web app with AI-powered workout recommendations via the Claude API.
 
-**Last active session:** 2026-06-04
+**Last active session:** 2026-06-14
 
 ---
 
@@ -14,6 +14,9 @@ npm run dev
 
 # Seed the database (run once after cloning)
 npm run seed
+
+# Import exercises from the Wger public API (safe to re-run — uses INSERT OR IGNORE)
+npm run import-wger
 ```
 
 - **Frontend:** http://localhost:5173
@@ -34,7 +37,12 @@ npm run seed
 │   └── /src
 │       ├── App.tsx             # Router setup (React Router v6)
 │       ├── /pages              # One file per route
-│       ├── /components         # Reusable UI components
+│       ├── /components
+│       │   ├── /dashboard      # BodySilhouette, WeeklyGoalsCard
+│       │   ├── /exercises      # MuscleGroupFilter, ExerciseCard, MuscleTagBadge
+│       │   ├── /workout        # AddExerciseModal, CopyWorkoutModal, ExerciseSetRow
+│       │   ├── /recommendations# MuscleHeatmap
+│       │   └── /shared         # LoadingSpinner, ErrorBanner
 │       ├── /hooks              # TanStack Query hooks (data fetching)
 │       ├── /api/client.ts      # All fetch() calls to the API live here
 │       └── /types/index.ts     # Shared TypeScript interfaces
@@ -44,6 +52,7 @@ npm run seed
         ├── db.ts               # SQLite setup, schema creation, migrations
         ├── /routes             # Request validation (Zod) + response shaping
         ├── /services           # Business logic + SQL queries
+        ├── /scripts            # One-off utilities (importWger.ts)
         ├── /seed               # One-time data seed (muscle groups + exercises)
         └── /types/index.ts     # Server-side TypeScript interfaces
 ```
@@ -80,15 +89,24 @@ Managed in `server/src/db.ts`. Schema is created on startup; migrations are appl
 muscle_groups        id, name, parent_id → muscle_groups(id)   (self-referential, 2 levels)
 exercises            id, name, description, equipment, movement_pattern, created_at
 exercise_muscle_groups  exercise_id, muscle_group_id, role ('primary'|'secondary')
-workouts             id, title, logged_at (ISO-8601), notes
+workouts             id, title, logged_at (ISO-8601), notes, location
 workout_exercises    id, workout_id, exercise_id, sort_order
 sets                 id, workout_exercise_id, set_number, reps, weight_lb, rpe, notes
 runs                 id, type ('run'|'row'), title, logged_at, distance_miles, duration_seconds, notes, source, external_id
+goals                id (always 1), strength_goal, cardio_goal   ← default weekly targets
+weekly_goals         id, week_start (ISO), week_end (ISO), strength_goal, cardio_goal
 ```
 
-Seed data: ~33 muscle groups (6 top-level, ~27 sub-muscles) and ~63 exercises. Run once with `npm run seed`.
+Seed data: ~33 muscle groups (6 top-level, ~27 sub-muscles) and ~63 seed exercises + ~585 imported from Wger. Run `npm run seed` once, then `npm run import-wger` to populate the full library.
 
 `runs.external_id` has a partial unique index (`WHERE external_id IS NOT NULL`) for NRC import deduplication.
+
+**Migrations applied at startup:**
+1. Add `title` to `workouts`
+2. Rename `weight_kg` → `weight_lb` in `sets`
+3. Add `type` to `runs`
+4. Add `source` + `external_id` to `runs`
+5. Add `location` to `workouts`
 
 ---
 
@@ -97,7 +115,7 @@ Seed data: ~33 muscle groups (6 top-level, ~27 sub-muscles) and ~63 exercises. R
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/api/muscle-groups` | Full two-level hierarchy |
-| GET | `/api/exercises` | List/search (`?search=&muscleGroupId=&equipment=&role=`) |
+| GET | `/api/exercises` | List/search (`?search=&muscleGroupId=&equipment=&role=`) — `muscleGroupId` matches the group OR any of its children |
 | GET | `/api/exercises/:id` | Exercise detail with muscles |
 | POST | `/api/exercises` | Create custom exercise |
 | PUT | `/api/exercises/:id` | Update exercise |
@@ -116,8 +134,11 @@ Seed data: ~33 muscle groups (6 top-level, ~27 sub-muscles) and ~63 exercises. R
 | PUT | `/api/runs/:id` | Edit existing run/row |
 | DELETE | `/api/runs/:id` | Delete run/row |
 | POST | `/api/runs/import/nrc` | Import NRC `.zip` export (multipart/form-data) |
+| GET | `/api/goals` | Current week's goals + live completion counts |
+| PUT | `/api/goals` | Update current week's goals (also updates `goals` default) |
+| GET | `/api/goals/history` | Past weeks with goals + completions (`?weeks=12`) |
 
-> **Route order matters:** `/api/workouts/muscle-summary` must be registered before `/api/workouts/:id`, and `/api/runs/import/nrc` must be registered before `/api/runs/:id` in Express to prevent the literal path segment being parsed as a numeric ID.
+> **Route order matters:** `/api/workouts/muscle-summary` must be registered before `/api/workouts/:id`, `/api/runs/import/nrc` before `/api/runs/:id`, and `/api/goals/history` before `/api/goals` (implied by Express router order).
 
 ---
 
@@ -125,9 +146,9 @@ Seed data: ~33 muscle groups (6 top-level, ~27 sub-muscles) and ~63 exercises. R
 
 | Page | Route | Description |
 |---|---|---|
-| Dashboard | `/` | Weekly summary (strength + running + rowing), last 3 workouts, muscle heatmap |
+| Dashboard | `/` | Weekly goals rings, weekly summary stats, body heatmap, muscle coverage, last 3 workouts |
 | Exercise Library | `/exercises` | Search + filter by muscle group / equipment |
-| Log Workout | `/log` | Create a new workout with drag-to-reorder exercises and inline set entry |
+| Log Workout | `/log` | Create workout — date+hour picker, gym location toggle, copy-from-previous, drag-to-reorder, Tab-to-add-set |
 | Edit Workout | `/log/:workoutId` | Pre-populates form from existing workout |
 | Workout History | `/history` | Paginated list with date range filter |
 | Recommendations | `/recommendations` | Goal selector → Claude AI suggestion |
@@ -139,6 +160,56 @@ Seed data: ~33 muscle groups (6 top-level, ~27 sub-muscles) and ~63 exercises. R
 | Row History | `/rows` | Paginated row list with weekly summary |
 
 `LogCardioPage` and `CardioHistoryPage` are shared components parameterized by `activityType: 'run' | 'row'`.
+
+---
+
+## Dashboard Components
+
+### `WeeklyGoalsCard`
+Two SVG circular progress rings (indigo = strength, emerald = cardio) showing completed vs. goal for the current Mon–Sun week. Goals are stored per-week in `weekly_goals` — each new week auto-seeds from the most recent past week's goals. A collapsible history section shows past weeks with met/missed indicators. Refreshes every 60 seconds.
+
+### `BodySilhouette`
+SVG front + back human body diagram with organic bezier muscle regions. Each region is colour-coded by the 7-day muscle summary (red = trained today → green = this week → dark = untrained). Hover shows a tooltip with muscle name, set count, and last trained date. Muscle → region mapping lives in `MUSCLE_TO_REGION` within the component.
+
+### `MuscleHeatmap`
+Existing badge grid grouped by parent muscle (Chest, Back, …). Sits above `BodySilhouette` in the dashboard.
+
+---
+
+## Log Workout — Key UX Details
+
+- **Date/time picker:** Separate `<input type="date">` + hour `<select>` (12 AM–11 PM). Minutes always stored as `:00`.
+- **Tab-to-add-set:** Pressing Tab on the RPE field of the *last* set in an exercise block adds a new set and auto-focuses its Reps input. Implemented in `ExerciseSetRow` (`isLast` + `onAddSet` props) + a `useEffect` + container ref in `SortableBlock`.
+- **Copy from previous workout:** "Copy previous" button opens `CopyWorkoutModal` — lists the 30 most recent workouts; selecting one calls `fetchWorkout(id)` and calls `initFromWorkout()` to pre-populate all exercises and set data. Title/date stay as fresh defaults.
+- **Location toggle:** Two buttons — "Latitude Gym" / "Onelife Gym" — stored in `workouts.location`. Clicking the active button deselects it (blank = home/unspecified).
+
+---
+
+## Exercise Library
+
+~648 exercises total (63 seeded + ~585 from Wger public API).
+
+**Wger import (`server/src/scripts/importWger.ts`):**
+- Fetches from `https://wger.de/api/v2/exerciseinfo/?language=2` (English only)
+- Maps Wger muscle IDs → our sub-muscle names, equipment names → our equipment strings, categories → movement patterns
+- Skips cardio exercises and exercises with no mappable muscles
+- Strips HTML from descriptions
+- `INSERT OR IGNORE` — safe to re-run; won't duplicate
+
+**Muscle group filter (`muscleGroupId` query param):**
+The filter subquery joins `muscle_groups` and checks `mg.id = $mgId OR mg.parent_id = $mgId` — so passing a top-level group ID (e.g., Chest) returns exercises tagged with any of its sub-muscles (Upper Pec, Mid/Sternal Pec, Lower Pec).
+
+**`AddExerciseModal` chips:** Chest · Back · Shoulders · Biceps · Triceps · Legs · Core. "Biceps" and "Triceps" are `subset` chips — they pre-filter to the Arms parent server-side then apply a name regex client-side (`/bicep|brachialis/i` and `/tricep/i`).
+
+---
+
+## Weekly Goals (`goalService.ts`)
+
+- `goals` table: single row (id=1), stores the default targets carried into new weeks.
+- `weekly_goals` table: one row per Mon–Sun week (`week_start` ISO = Monday 00:00:00 local, `week_end` = Sunday 23:59:59 local).
+- `ensureCurrentWeek()`: called on every `GET /api/goals` — creates the current week's row if absent, seeding from the most recent `weekly_goals` row (or `goals` defaults).
+- `updateGoals()`: UPSERTs `weekly_goals` for the current week AND updates `goals` so future weeks inherit the new targets.
+- `getGoalsHistory()`: correlated subquery counts workouts/runs within each stored week's bounds; marks `strength_met` and `cardio_met` booleans.
 
 ---
 
@@ -174,6 +245,6 @@ Recommendations are stateless and not persisted to the database.
 
 - **`node:sqlite` typing:** Query results must be cast with `as unknown as TargetType`. Named params must be typed as `Record<string, string | number | null | bigint>` — the driver rejects `unknown`. Every named param in the object must appear in the SQL string, or the driver throws "Unknown named parameter".
 - **DB path:** Always resolved relative to `__dirname` in `db.ts` (not `process.cwd()`) so the path is correct regardless of which directory the server is started from.
-- **Migrations:** Applied at startup — (1) add `title` to `workouts`, (2) rename `weight_kg` → `weight_lb` in `sets`, (3) add `type` to `runs`, (4) add `source` + `external_id` to `runs`.
 - **`LogWorkoutPage`** is the most complex component: local `ExerciseBlock[]` state manages the full form, `@dnd-kit` handles drag-to-reorder, and sets are filtered (must have reps or weight) before the payload is built.
 - **NRC import:** Uses `adm-zip` (pure-JS, no native compilation) + `multer` memoryStorage. Parses `activities/*.json` from the Nike data export zip. Distance converted from km, duration from ms. Deduplicates via `external_id`. Non-fatal per-file errors are collected and returned without aborting the whole import. The `importNrcRuns` client function uses raw `FormData` — do NOT set `Content-Type` manually (browser must set the multipart boundary).
+- **`BodySilhouette` SVG:** ViewBox `0 0 420 540`. Front figure at cx=105, back at cx=315 (offset +210). Each body section (torso, arms, legs) is a separate dark background path; muscle regions overlay with bezier curves. `hp(regionKey)` spreads `onMouseEnter`/`onMouseMove`/`onMouseLeave` onto every coloured element for the custom tooltip.

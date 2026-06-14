@@ -52,6 +52,7 @@ export interface WorkoutDetail {
   title: string | null;
   logged_at: string;
   notes: string | null;
+  location: string | null;
   exercises: WorkoutExerciseDetail[];
 }
 
@@ -60,6 +61,7 @@ export interface WorkoutSummary {
   title: string | null;
   logged_at: string;
   notes: string | null;
+  location: string | null;
   exercise_count: number;
   total_sets: number;
   exercise_names: string[];
@@ -83,6 +85,7 @@ export interface WorkoutCreateInput {
   title?: string;
   logged_at?: string;
   notes?: string;
+  location?: string;
   exercises: WorkoutExerciseInput[];
 }
 
@@ -133,6 +136,11 @@ export interface SuggestedExercise {
   sets: number;
   rep_range: string;
   rationale: string;
+}
+
+export interface Goals {
+  strength_goal: number;
+  cardio_goal: number;
 }
 
 export interface RecommendationResponse {

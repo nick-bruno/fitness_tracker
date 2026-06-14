@@ -9,9 +9,11 @@ interface Props {
   set: SetRowState;
   onChange: (updated: SetRowState) => void;
   onRemove: () => void;
+  isLast?: boolean;
+  onAddSet?: () => void;
 }
 
-export default function ExerciseSetRow({ set, onChange, onRemove }: Props) {
+export default function ExerciseSetRow({ set, onChange, onRemove, isLast, onAddSet }: Props) {
   return (
     <div className="flex items-center gap-2">
       <span className="w-6 text-center text-xs text-gray-500">{set.set_number}</span>
@@ -40,6 +42,12 @@ export default function ExerciseSetRow({ set, onChange, onRemove }: Props) {
         placeholder="RPE"
         value={set.rpe}
         onChange={(e) => onChange({ ...set, rpe: e.target.value })}
+        onKeyDown={(e) => {
+          if (e.key === 'Tab' && isLast && onAddSet) {
+            e.preventDefault();
+            onAddSet();
+          }
+        }}
         className="w-16 rounded border border-gray-700 bg-gray-800 px-2 py-1 text-sm text-gray-100 focus:border-indigo-500 focus:outline-none"
       />
       <button

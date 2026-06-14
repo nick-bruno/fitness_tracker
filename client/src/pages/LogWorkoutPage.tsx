@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   DndContext,
@@ -20,6 +20,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useWorkout, useCreateWorkout, useUpdateWorkout } from '../hooks/useWorkouts';
 import type { Exercise, WorkoutDetail } from '../types';
 import AddExerciseModal from '../components/workout/AddExerciseModal';
+import CopyWorkoutModal from '../components/workout/CopyWorkoutModal';
 import ExerciseSetRow from '../components/workout/ExerciseSetRow';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
 import ErrorBanner from '../components/shared/ErrorBanner';
@@ -68,7 +69,19 @@ function toISOLocal(dt: string) {
 function toDatetimeLocal(iso: string) {
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:00`;
+}
+
+function getDatePart(dt: string) { return dt.slice(0, 10); }
+function getHourPart(dt: string) { return parseInt(dt.slice(11, 13)); }
+function buildDatetimeLocal(date: string, hour: number) {
+  return `${date}T${String(hour).padStart(2, '0')}:00`;
+}
+function formatHour(h: number) {
+  if (h === 0) return '12 AM';
+  if (h < 12) return `${h} AM`;
+  if (h === 12) return '12 PM';
+  return `${h - 12} PM`;
 }
 
 // ── Sortable exercise block ─────────────────────────────────────────────────
@@ -83,6 +96,16 @@ function SortableBlock({ block, onUpdateSets, onRemove }: SortableBlockProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: block.localId,
   });
+
+  const setsRef = useRef<HTMLDivElement>(null);
+  const prevSetCount = useRef(block.sets.length);
+  useEffect(() => {
+    if (block.sets.length > prevSetCount.current) {
+      const inputs = setsRef.current?.querySelectorAll<HTMLInputElement>('input[placeholder="Reps"]');
+      inputs?.[inputs.length - 1]?.focus();
+    }
+    prevSetCount.current = block.sets.length;
+  }, [block.sets.length]);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -155,19 +178,21 @@ function SortableBlock({ block, onUpdateSets, onRemove }: SortableBlockProps) {
       </div>
 
       {/* Sets */}
-      <div className="mt-4 space-y-2">
+      <div className="mt-4 space-y-2" ref={setsRef}>
         <div className="flex items-center gap-2 text-xs text-gray-600">
           <span className="w-6 text-center">#</span>
           <span className="w-20">Reps</span>
           <span className="w-20">Weight (lb)</span>
           <span className="w-16">RPE</span>
         </div>
-        {block.sets.map((set) => (
+        {block.sets.map((set, index) => (
           <ExerciseSetRow
             key={set.localId}
             set={set}
             onChange={(updated) => updateSet(set.localId, { ...updated, localId: set.localId })}
             onRemove={() => removeSet(set.localId)}
+            isLast={index === block.sets.length - 1}
+            onAddSet={addSet}
           />
         ))}
       </div>
@@ -196,15 +221,22 @@ export default function LogWorkoutPage() {
   const [title, setTitle] = useState('');
   const [loggedAt, setLoggedAt] = useState(toDatetimeLocal(new Date().toISOString()));
   const [notes, setNotes] = useState('');
+  const [location, setLocation] = useState('');
   const [exercises, setExercises] = useState<ExerciseBlock[]>([]);
   const [showModal, setShowModal] = useState(false);
+  const [showCopyModal, setShowCopyModal] = useState(false);
   const [saveError, setSaveError] = useState('');
+
+  const handleCopyWorkout = (workout: WorkoutDetail) => {
+    setExercises(initFromWorkout(workout));
+  };
 
   useEffect(() => {
     if (existingWorkout) {
       setTitle(existingWorkout.title ?? '');
       setLoggedAt(toDatetimeLocal(existingWorkout.logged_at));
       setNotes(existingWorkout.notes ?? '');
+      setLocation(existingWorkout.location ?? '');
       setExercises(initFromWorkout(existingWorkout));
     }
   }, [existingWorkout]);
@@ -258,6 +290,7 @@ export default function LogWorkoutPage() {
       title: title.trim() || undefined,
       logged_at: toISOLocal(loggedAt),
       notes: notes || undefined,
+      location: location || undefined,
       exercises: exercises.map((ex, i) => ({
         exercise_id: ex.exercise_id,
         sort_order: i,
@@ -327,12 +360,23 @@ export default function LogWorkoutPage() {
         </div>
         <div>
           <label className="mb-1 block text-xs text-gray-500">Date & Time</label>
-          <input
-            type="datetime-local"
-            value={loggedAt}
-            onChange={(e) => setLoggedAt(e.target.value)}
-            className="rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 focus:border-indigo-500 focus:outline-none"
-          />
+          <div className="flex gap-2">
+            <input
+              type="date"
+              value={getDatePart(loggedAt)}
+              onChange={(e) => setLoggedAt(buildDatetimeLocal(e.target.value, getHourPart(loggedAt)))}
+              className="rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 focus:border-indigo-500 focus:outline-none"
+            />
+            <select
+              value={getHourPart(loggedAt)}
+              onChange={(e) => setLoggedAt(buildDatetimeLocal(getDatePart(loggedAt), parseInt(e.target.value)))}
+              className="rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 focus:border-indigo-500 focus:outline-none"
+            >
+              {Array.from({ length: 24 }, (_, h) => (
+                <option key={h} value={h}>{formatHour(h)}</option>
+              ))}
+            </select>
+          </div>
         </div>
         <div>
           <label className="mb-1 block text-xs text-gray-500">Notes (optional)</label>
@@ -343,6 +387,25 @@ export default function LogWorkoutPage() {
             placeholder="How did it go?"
             className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:border-indigo-500 focus:outline-none"
           />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-gray-500">Location (optional)</label>
+          <div className="flex gap-2">
+            {['Latitude Gym', 'Onelife Gym'].map((gym) => (
+              <button
+                key={gym}
+                type="button"
+                onClick={() => setLocation((prev) => (prev === gym ? '' : gym))}
+                className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${
+                  location === gym
+                    ? 'border-indigo-500 bg-indigo-900/50 text-indigo-300'
+                    : 'border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-500 hover:text-gray-200'
+                }`}
+              >
+                {gym}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -372,15 +435,31 @@ export default function LogWorkoutPage() {
       {exercises.length === 0 && (
         <div className="rounded-xl border border-dashed border-gray-800 py-10 text-center">
           <p className="text-gray-500">No exercises added yet.</p>
+          <button
+            onClick={() => setShowCopyModal(true)}
+            className="mt-3 text-sm text-indigo-400 hover:text-indigo-300"
+          >
+            Copy from a previous workout →
+          </button>
         </div>
       )}
 
-      <button
-        onClick={() => setShowModal(true)}
-        className="w-full rounded-xl border border-dashed border-indigo-800 py-3 text-sm font-medium text-indigo-400 hover:border-indigo-600 hover:text-indigo-300"
-      >
-        + Add Exercise
-      </button>
+      <div className="flex gap-2">
+        <button
+          onClick={() => setShowModal(true)}
+          className="flex-1 rounded-xl border border-dashed border-indigo-800 py-3 text-sm font-medium text-indigo-400 hover:border-indigo-600 hover:text-indigo-300"
+        >
+          + Add Exercise
+        </button>
+        {!editId && (
+          <button
+            onClick={() => setShowCopyModal(true)}
+            className="rounded-xl border border-dashed border-gray-700 px-4 py-3 text-sm font-medium text-gray-400 hover:border-gray-500 hover:text-gray-200"
+          >
+            Copy previous
+          </button>
+        )}
+      </div>
 
       {saveError && <ErrorBanner message={saveError} />}
 
@@ -397,6 +476,9 @@ export default function LogWorkoutPage() {
 
       {showModal && (
         <AddExerciseModal onSelect={addExercise} onClose={() => setShowModal(false)} />
+      )}
+      {showCopyModal && (
+        <CopyWorkoutModal onSelect={handleCopyWorkout} onClose={() => setShowCopyModal(false)} />
       )}
     </div>
   );

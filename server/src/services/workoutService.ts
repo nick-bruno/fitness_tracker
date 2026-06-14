@@ -36,7 +36,7 @@ export function listWorkouts(opts: {
 
   const rows = db
     .prepare(
-      `SELECT w.id, w.title, w.logged_at, w.notes,
+      `SELECT w.id, w.title, w.logged_at, w.notes, w.location,
          COUNT(DISTINCT we.id) AS exercise_count,
          COUNT(s.id)           AS total_sets,
          GROUP_CONCAT(e.name, '||') AS exercise_names_raw
@@ -64,6 +64,7 @@ export function listWorkouts(opts: {
     title: r.title,
     logged_at: r.logged_at,
     notes: r.notes,
+    location: (r as unknown as { location: string | null }).location,
     exercise_count: r.exercise_count,
     total_sets: r.total_sets,
     exercise_names: r.exercise_names_raw ? [...new Set(r.exercise_names_raw.split('||'))] : [],
@@ -74,8 +75,8 @@ export function listWorkouts(opts: {
 
 export function getWorkoutById(id: number): WorkoutDetail | undefined {
   const workout = db
-    .prepare('SELECT id, title, logged_at, notes FROM workouts WHERE id = $id')
-    .get({ id }) as unknown as { id: number; title: string | null; logged_at: string; notes: string | null } | undefined;
+    .prepare('SELECT id, title, logged_at, notes, location FROM workouts WHERE id = $id')
+    .get({ id }) as unknown as { id: number; title: string | null; logged_at: string; notes: string | null; location: string | null } | undefined;
   if (!workout) return undefined;
 
   const weRows = db
@@ -114,18 +115,19 @@ export function getWorkoutById(id: number): WorkoutDetail | undefined {
     exercises.push({ ...we, muscles, sets });
   }
 
-  return { id: workout.id, title: workout.title, logged_at: workout.logged_at, notes: workout.notes, exercises };
+  return { id: workout.id, title: workout.title, logged_at: workout.logged_at, notes: workout.notes, location: workout.location, exercises };
 }
 
 export function createWorkout(data: WorkoutCreateInput): WorkoutDetail {
   db.exec('BEGIN TRANSACTION');
   try {
     const result = db
-      .prepare('INSERT INTO workouts (title, logged_at, notes) VALUES ($title, $logged_at, $notes)')
+      .prepare('INSERT INTO workouts (title, logged_at, notes, location) VALUES ($title, $logged_at, $notes, $location)')
       .run({
         title: data.title ?? null,
         logged_at: data.logged_at ?? new Date().toISOString(),
         notes: data.notes ?? null,
+        location: data.location ?? null,
       }) as { lastInsertRowid: number };
 
     const workoutId = result.lastInsertRowid;
@@ -147,11 +149,12 @@ export function updateWorkout(
 
   db.exec('BEGIN TRANSACTION');
   try {
-    db.prepare('UPDATE workouts SET title = $title, logged_at = $logged_at, notes = $notes WHERE id = $id').run({
+    db.prepare('UPDATE workouts SET title = $title, logged_at = $logged_at, notes = $notes, location = $location WHERE id = $id').run({
       id,
       title: data.title ?? null,
       logged_at: data.logged_at ?? new Date().toISOString(),
       notes: data.notes ?? null,
+      location: data.location ?? null,
     });
 
     db.prepare('DELETE FROM workout_exercises WHERE workout_id = $id').run({ id });

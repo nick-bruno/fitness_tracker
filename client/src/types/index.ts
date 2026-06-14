@@ -46,6 +46,7 @@ export interface WorkoutDetail {
   title: string | null;
   logged_at: string;
   notes: string | null;
+  location: string | null;
   exercises: WorkoutExerciseDetail[];
 }
 
@@ -54,6 +55,7 @@ export interface WorkoutSummary {
   title: string | null;
   logged_at: string;
   notes: string | null;
+  location: string | null;
   exercise_count: number;
   total_sets: number;
   exercise_names: string[];
@@ -115,6 +117,29 @@ export interface SuggestedExercise {
   rationale: string;
 }
 
+export interface Goals {
+  strength_goal: number;
+  cardio_goal: number;
+}
+
+export interface GoalsWithProgress extends Goals {
+  strength_completed: number;
+  cardio_completed: number;
+  week_start: string;
+  week_end: string;
+}
+
+export interface WeekHistoryRecord {
+  week_start: string;
+  week_end: string;
+  strength_goal: number;
+  cardio_goal: number;
+  strength_completed: number;
+  cardio_completed: number;
+  strength_met: boolean;
+  cardio_met: boolean;
+}
+
 export interface RecommendationResponse {
   target_muscle_groups: TargetMuscleGroup[];
   suggested_exercises: SuggestedExercise[];
@@ -139,5 +164,6 @@ export interface WorkoutCreateInput {
   title?: string;
   logged_at?: string;
   notes?: string;
+  location?: string;
   exercises: WorkoutExerciseInput[];
 }

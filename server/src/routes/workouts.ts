@@ -29,6 +29,7 @@ const WorkoutSchema = z.object({
   title: z.string().optional(),
   logged_at: z.string().datetime().optional(),
   notes: z.string().optional(),
+  location: z.string().optional(),
   exercises: z.array(WorkoutExerciseSchema).min(1),
 });
 

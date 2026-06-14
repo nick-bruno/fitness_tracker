@@ -127,6 +127,20 @@ export const importNrcRuns = async (file: File): Promise<NrcImportResult> => {
   return res.json() as Promise<NrcImportResult>;
 };
 
+// Goals
+export const fetchGoals = () =>
+  request<{ goals: import('../types').GoalsWithProgress }>('/goals').then((r) => r.goals);
+
+export const updateGoals = (strength_goal: number, cardio_goal: number) =>
+  request<{ goals: import('../types').GoalsWithProgress }>('/goals', {
+    method: 'PUT',
+    ...json({ strength_goal, cardio_goal }),
+  }).then((r) => r.goals);
+
+export const fetchGoalsHistory = (weeks = 12) =>
+  request<{ history: import('../types').WeekHistoryRecord[] }>(`/goals/history?weeks=${weeks}`)
+    .then((r) => r.history);
+
 // Recommendations
 export const fetchRecommendation = (goals: string[], lookback_days: number) =>
   request<{ recommendation: RecommendationResponse }>('/recommendations', {
