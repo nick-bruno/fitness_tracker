@@ -1,9 +1,114 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --bg:          #FAFAF8;
+  --bg-card:     #FFFFFF;
+  --bg-subtle:   #F5F3F0;
+  --bg-hover:    #EFEDE9;
+  --border:      #E7E4DE;
+  --border-strong: #D1CECC;
+  --text-1:      #1C1917;
+  --text-2:      #57534E;
+  --text-3:      #A8A29E;
+  --accent:      #4F46E5;
+  --accent-light:#EEF2FF;
+  --green-light: #ECFDF5;
+  --red-light:   #FEF2F2;
+  --sky-light:   #F0F9FF;
+  --svg-neutral: #E8E5DF;
+  --svg-neutral-s: #D4CFC8;
+}
+
+/* ── Dark mode overrides ──────────────────────────────────── */
+html.dark {
+  --bg:          #111110;
+  --bg-card:     #1A1917;
+  --bg-subtle:   #222120;
+  --bg-hover:    #2A2826;
+  --border:      #2E2B27;
+  --border-strong: #3D3A36;
+  --text-1:      #F2EFE8;
+  --text-2:      #9E9890;
+  --text-3:      #5C5750;
+  --accent-light: rgba(79,70,229,0.15);
+  --green-light: rgba(5,150,105,0.12);
+  --red-light:   rgba(220,38,38,0.12);
+  --sky-light:   rgba(2,132,199,0.12);
+  --svg-neutral: #2C2A27;
+  --svg-neutral-s: #3A3733;
+}
+
 @layer base {
   body {
-    @apply bg-gray-950 text-gray-100;
+    background-color: var(--bg);
+    color: var(--text-1);
+    font-family: 'Outfit', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
+  h1, h2, h3, h4 { letter-spacing: -0.01em; }
+}
+
+/* ── Skeleton shimmer ─────────────────────────────────────── */
+@keyframes skeleton-wave {
+  0%   { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+.skeleton {
+  border-radius: 0.5rem;
+  background: linear-gradient(90deg, #EEECEA 0%, #E4E1DC 40%, #EEECEA 80%);
+  background-size: 400% 100%;
+  animation: skeleton-wave 1.6s ease-in-out infinite;
+}
+
+/* ── Animations ───────────────────────────────────────────── */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-fade-up { animation: fade-up 0.25s ease both; }
+.animate-fade-in { animation: fade-in 0.2s ease both; }
+
+/* Staggered children for list reveals */
+.stagger > *:nth-child(1) { animation-delay: 0ms; }
+.stagger > *:nth-child(2) { animation-delay: 50ms; }
+.stagger > *:nth-child(3) { animation-delay: 100ms; }
+.stagger > *:nth-child(4) { animation-delay: 150ms; }
+.stagger > *:nth-child(5) { animation-delay: 200ms; }
+.stagger > *:nth-child(6) { animation-delay: 250ms; }
+
+/* ── Card hover lift ──────────────────────────────────────── */
+.card-hover {
+  transition: box-shadow 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
+}
+.card-hover:hover {
+  box-shadow: 0 4px 14px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.04);
+  transform: translateY(-1px);
+}
+/* In dark mode suppress subtle shadows; border is enough */
+html.dark .shadow-card,
+html.dark .shadow-card-hover { box-shadow: none; }
+html.dark .card-hover:hover  { transform: translateY(-1px); box-shadow: none; }
+
+/* Dark skeleton */
+html.dark .skeleton {
+  background: linear-gradient(90deg, #242320 0%, #2E2B27 40%, #242320 80%);
+  background-size: 400% 100%;
+}
+
+/* ── Input focus ring ─────────────────────────────────────── */
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="date"]:focus,
+input[type="datetime-local"]:focus,
+textarea:focus,
+select:focus {
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
 }

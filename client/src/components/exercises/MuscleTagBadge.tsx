@@ -6,10 +6,10 @@ interface Props {
 export default function MuscleTagBadge({ name, role }: Props) {
   return (
     <span
-      className={`inline-block rounded px-1.5 py-0.5 text-xs font-medium ${
+      className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${
         role === 'primary'
-          ? 'bg-indigo-900/70 text-indigo-300'
-          : 'bg-gray-800 text-gray-400'
+          ? 'bg-[var(--accent-light)] text-indigo-700 ring-1 ring-indigo-200/60 dark:text-indigo-300 dark:ring-indigo-700/40'
+          : 'bg-[var(--bg-subtle)] text-[var(--text-2)] ring-1 ring-[var(--border)]'
       }`}
     >
       {name}

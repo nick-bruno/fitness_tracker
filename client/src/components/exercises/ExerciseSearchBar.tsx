@@ -19,7 +19,7 @@ export default function ExerciseSearchBar({ value, onChange }: Props) {
       value={local}
       onChange={(e) => setLocal(e.target.value)}
       placeholder="Search exercises..."
-      className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 placeholder-gray-500 focus:border-indigo-500 focus:outline-none"
+      className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-sm text-[var(--text-1)] placeholder-[var(--text-3)] focus:border-indigo-400 focus:outline-none transition-colors"
     />
   );
 }

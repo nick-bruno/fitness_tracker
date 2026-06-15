@@ -139,7 +139,7 @@ function SortableBlock({ block, onUpdateSets, onRemove }: SortableBlockProps) {
     <div
       ref={setNodeRef}
       style={style}
-      className="rounded-xl border border-gray-800 bg-gray-900 p-4"
+      className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 shadow-card animate-fade-up"
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
@@ -147,39 +147,31 @@ function SortableBlock({ block, onUpdateSets, onRemove }: SortableBlockProps) {
           <button
             {...attributes}
             {...listeners}
-            className="cursor-grab touch-none text-gray-600 hover:text-gray-400"
+            className="cursor-grab touch-none text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors"
             title="Drag to reorder"
           >
             ⠿
           </button>
           <div>
-            <p className="font-semibold text-gray-100">{block.exercise_name}</p>
-            <div className="mt-1 flex flex-wrap gap-1">
+            <p className="font-semibold text-[var(--text-1)]">{block.exercise_name}</p>
+            <div className="mt-1.5 flex flex-wrap gap-1">
               {primaries.map((m) => (
-                <MuscleTagBadge
-                  key={m.muscle_group_name}
-                  name={m.muscle_group_name}
-                  role="primary"
-                />
+                <MuscleTagBadge key={m.muscle_group_name} name={m.muscle_group_name} role="primary" />
               ))}
               {secondaries.map((m) => (
-                <MuscleTagBadge
-                  key={m.muscle_group_name}
-                  name={m.muscle_group_name}
-                  role="secondary"
-                />
+                <MuscleTagBadge key={m.muscle_group_name} name={m.muscle_group_name} role="secondary" />
               ))}
             </div>
           </div>
         </div>
-        <button onClick={onRemove} className="text-gray-600 hover:text-red-400" title="Remove exercise">
+        <button onClick={onRemove} className="rounded-lg p-1 text-[var(--text-3)] hover:bg-red-50 hover:text-red-500 transition-colors" title="Remove exercise">
           ✕
         </button>
       </div>
 
       {/* Sets */}
       <div className="mt-4 space-y-2" ref={setsRef}>
-        <div className="flex items-center gap-2 text-xs text-gray-600">
+        <div className="flex items-center gap-2 text-xs font-medium text-[var(--text-3)]">
           <span className="w-6 text-center">#</span>
           <span className="w-20">Reps</span>
           <span className="w-20">Weight (lb)</span>
@@ -199,7 +191,7 @@ function SortableBlock({ block, onUpdateSets, onRemove }: SortableBlockProps) {
 
       <button
         onClick={addSet}
-        className="mt-3 text-xs text-indigo-400 hover:text-indigo-300"
+        className="mt-3 text-xs font-medium text-indigo-500 hover:text-indigo-700 transition-colors"
       >
         + Add set
       </button>
@@ -334,43 +326,40 @@ export default function LogWorkoutPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-100">
+      <div className="flex items-center justify-between animate-fade-up">
+        <h1 className="text-3xl font-bold tracking-tight text-[var(--text-1)]">
           {editId ? 'Edit Workout' : 'Log Workout'}
         </h1>
-        <button
-          onClick={() => navigate(-1)}
-          className="text-sm text-gray-500 hover:text-gray-300"
-        >
+        <button onClick={() => navigate(-1)} className="text-sm font-medium text-[var(--text-3)] hover:text-[var(--text-1)] transition-colors">
           ← Back
         </button>
       </div>
 
       {/* Title, date & notes */}
-      <div className="rounded-xl border border-gray-800 bg-gray-900 p-4 space-y-3">
+      <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 shadow-card space-y-3 animate-fade-up">
         <div>
-          <label className="mb-1 block text-xs text-gray-500">Title (optional)</label>
+          <label className="mb-1 block text-xs font-medium text-[var(--text-2)]">Title (optional)</label>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder='e.g. "Biceps and Back"'
-            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:border-indigo-500 focus:outline-none"
+            className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-sm text-[var(--text-1)] placeholder-[var(--text-3)] focus:border-indigo-400 focus:outline-none transition-colors"
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs text-gray-500">Date & Time</label>
+          <label className="mb-1 block text-xs font-medium text-[var(--text-2)]">Date & Time</label>
           <div className="flex gap-2">
             <input
               type="date"
               value={getDatePart(loggedAt)}
               onChange={(e) => setLoggedAt(buildDatetimeLocal(e.target.value, getHourPart(loggedAt)))}
-              className="rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 focus:border-indigo-500 focus:outline-none"
+              className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-sm text-[var(--text-1)] focus:border-indigo-400 focus:outline-none transition-colors"
             />
             <select
               value={getHourPart(loggedAt)}
               onChange={(e) => setLoggedAt(buildDatetimeLocal(getDatePart(loggedAt), parseInt(e.target.value)))}
-              className="rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 focus:border-indigo-500 focus:outline-none"
+              className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-sm text-[var(--text-1)] focus:border-indigo-400 focus:outline-none transition-colors"
             >
               {Array.from({ length: 24 }, (_, h) => (
                 <option key={h} value={h}>{formatHour(h)}</option>
@@ -379,27 +368,27 @@ export default function LogWorkoutPage() {
           </div>
         </div>
         <div>
-          <label className="mb-1 block text-xs text-gray-500">Notes (optional)</label>
+          <label className="mb-1 block text-xs font-medium text-[var(--text-2)]">Notes (optional)</label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={2}
             placeholder="How did it go?"
-            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:border-indigo-500 focus:outline-none"
+            className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-sm text-[var(--text-1)] placeholder-[var(--text-3)] focus:border-indigo-400 focus:outline-none transition-colors"
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs text-gray-500">Location (optional)</label>
+          <label className="mb-1 block text-xs font-medium text-[var(--text-2)]">Location (optional)</label>
           <div className="flex gap-2">
             {['Latitude Gym', 'Onelife Gym'].map((gym) => (
               <button
                 key={gym}
                 type="button"
                 onClick={() => setLocation((prev) => (prev === gym ? '' : gym))}
-                className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${
+                className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-all ${
                   location === gym
-                    ? 'border-indigo-500 bg-indigo-900/50 text-indigo-300'
-                    : 'border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-500 hover:text-gray-200'
+                    ? 'border-indigo-300 bg-indigo-50 text-indigo-700'
+                    : 'border-[var(--border)] bg-[var(--bg-card)] text-[var(--text-2)] hover:border-[var(--border-strong)] hover:text-[var(--text-1)]'
                 }`}
               >
                 {gym}
@@ -433,11 +422,11 @@ export default function LogWorkoutPage() {
       </DndContext>
 
       {exercises.length === 0 && (
-        <div className="rounded-xl border border-dashed border-gray-800 py-10 text-center">
-          <p className="text-gray-500">No exercises added yet.</p>
+        <div className="rounded-xl border border-dashed border-[var(--border)] py-10 text-center animate-fade-in">
+          <p className="text-[var(--text-3)]">No exercises added yet.</p>
           <button
             onClick={() => setShowCopyModal(true)}
-            className="mt-3 text-sm text-indigo-400 hover:text-indigo-300"
+            className="mt-3 text-sm font-medium text-indigo-500 hover:text-indigo-700 transition-colors"
           >
             Copy from a previous workout →
           </button>
@@ -447,14 +436,14 @@ export default function LogWorkoutPage() {
       <div className="flex gap-2">
         <button
           onClick={() => setShowModal(true)}
-          className="flex-1 rounded-xl border border-dashed border-indigo-800 py-3 text-sm font-medium text-indigo-400 hover:border-indigo-600 hover:text-indigo-300"
+          className="flex-1 rounded-xl border border-dashed border-indigo-300 py-3 text-sm font-semibold text-indigo-500 hover:border-indigo-400 hover:bg-indigo-50/50 transition-all"
         >
           + Add Exercise
         </button>
         {!editId && (
           <button
             onClick={() => setShowCopyModal(true)}
-            className="rounded-xl border border-dashed border-gray-700 px-4 py-3 text-sm font-medium text-gray-400 hover:border-gray-500 hover:text-gray-200"
+            className="rounded-xl border border-dashed border-[var(--border)] px-4 py-3 text-sm font-medium text-[var(--text-3)] hover:border-[var(--border-strong)] hover:text-[var(--text-1)] transition-all"
           >
             Copy previous
           </button>
@@ -467,7 +456,7 @@ export default function LogWorkoutPage() {
         <button
           onClick={handleSave}
           disabled={isSaving}
-          className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-indigo-600 py-2.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+          className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-indigo-500 to-indigo-600 py-2.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 hover:from-indigo-400 hover:to-indigo-500 active:from-indigo-600 active:to-indigo-700 disabled:opacity-50 transition-all"
         >
           {isSaving && <LoadingSpinner size="sm" />}
           {isSaving ? 'Saving...' : editId ? 'Update Workout' : 'Save Workout'}

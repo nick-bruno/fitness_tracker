@@ -18,15 +18,18 @@ export default function MuscleGroupFilter({ groups, selectedId, onSelect }: Prop
     });
   };
 
+  const activeBtn = 'bg-[var(--accent-light)] text-indigo-700 dark:text-indigo-300';
+  const inactiveBtn = 'text-[var(--text-2)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-1)]';
+
   return (
-    <div className="rounded-xl border border-gray-800 bg-gray-900 p-3">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-3 shadow-card">
+      <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text-3)]">
         Muscle Group
       </p>
       <button
         onClick={() => onSelect(undefined)}
-        className={`mb-1 w-full rounded px-2 py-1.5 text-left text-sm transition-colors ${
-          selectedId == null ? 'bg-indigo-900/60 text-indigo-300' : 'text-gray-400 hover:bg-gray-800'
+        className={`mb-1 w-full rounded-lg px-2 py-1.5 text-left text-sm font-medium transition-all duration-150 ${
+          selectedId == null ? activeBtn : inactiveBtn
         }`}
       >
         All
@@ -35,21 +38,19 @@ export default function MuscleGroupFilter({ groups, selectedId, onSelect }: Prop
         <div key={parent.id}>
           <button
             onClick={() => toggleParent(parent.id)}
-            className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-sm font-medium text-gray-300 hover:bg-gray-800"
+            className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--bg-hover)] transition-colors`}
           >
             {parent.name}
-            <span className="text-xs">{openParents.has(parent.id) ? '▲' : '▼'}</span>
+            <span className={`text-[10px] text-[var(--text-3)] transition-transform duration-150 ${openParents.has(parent.id) ? 'rotate-180' : ''}`}>▼</span>
           </button>
           {openParents.has(parent.id) && (
-            <div className="ml-3 flex flex-col gap-0.5">
+            <div className="ml-3 mt-0.5 flex flex-col gap-0.5 animate-fade-in">
               {parent.children.map((child) => (
                 <button
                   key={child.id}
                   onClick={() => onSelect(child.id === selectedId ? undefined : child.id)}
-                  className={`rounded px-2 py-1 text-left text-xs transition-colors ${
-                    selectedId === child.id
-                      ? 'bg-indigo-900/60 text-indigo-300'
-                      : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'
+                  className={`rounded-lg px-2 py-1 text-left text-xs font-medium transition-all duration-150 ${
+                    selectedId === child.id ? activeBtn : inactiveBtn
                   }`}
                 >
                   {child.name}

@@ -20,16 +20,17 @@ function GoalRing({ label, sublabel, completed, goal, color }: RingProps) {
   const offset = circ * (1 - progress);
   const done = completed >= goal && goal > 0;
 
-  const track  = color === 'indigo' ? '#1e1b4b' : '#022c22';
-  const fill   = done
+  const isDark  = document.documentElement.classList.contains('dark');
+  const track   = isDark
+    ? (color === 'indigo' ? '#1e1b4b' : '#022c22')
+    : (color === 'indigo' ? '#E0E7FF' : '#D1FAE5');
+  const fill    = color === 'indigo' ? (done ? '#4F46E5' : '#6366F1') : (done ? '#059669' : '#10B981');
+  const glow    = fill;
+  const textClr = isDark
     ? (color === 'indigo' ? '#a5b4fc' : '#6ee7b7')
-    : (color === 'indigo' ? '#6366f1'  : '#10b981');
-  const glow   = done
-    ? (color === 'indigo' ? '#818cf8' : '#34d399')
-    : fill;
-  const textClr = done
-    ? (color === 'indigo' ? '#c7d2fe' : '#a7f3d0')
-    : '#f1f5f9';
+    : done
+      ? (color === 'indigo' ? '#3730A3' : '#065F46')
+      : (color === 'indigo' ? '#4338CA' : '#047857');
 
   return (
     <div className="flex flex-col items-center gap-3">
@@ -81,14 +82,14 @@ function GoalRing({ label, sublabel, completed, goal, color }: RingProps) {
           </text>
         </svg>
         {done && (
-          <span className="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-gray-900 text-xs">
+          <span className="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--bg-subtle)] text-xs">
             ✓
           </span>
         )}
       </div>
       <div className="text-center">
-        <p className="text-sm font-semibold text-gray-200">{label}</p>
-        <p className="text-xs text-gray-500">{sublabel}</p>
+        <p className="text-sm font-semibold text-[var(--text-1)]">{label}</p>
+        <p className="text-xs text-[var(--text-3)]">{sublabel}</p>
       </div>
     </div>
   );
@@ -115,63 +116,48 @@ function EditGoalsModal({ strengthGoal, cardioGoal, onSave, onClose, saving }: E
   };
 
   const inputCls =
-    'w-20 rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-center text-lg font-bold text-gray-100 focus:border-indigo-500 focus:outline-none';
+    'w-20 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-center text-lg font-bold text-[var(--text-1)] focus:border-indigo-400 focus:outline-none';
+  const stepBtn =
+    'flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--bg-card)] text-[var(--text-2)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-1)] transition-colors font-medium';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="w-full max-w-sm rounded-2xl border border-gray-700 bg-gray-900 p-6 shadow-2xl">
-        <h2 className="mb-1 font-semibold text-gray-100">Weekly Goals</h2>
-        <p className="mb-6 text-xs text-gray-500">Set your targets for Mon – Sun.</p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm animate-fade-in">
+      <div className="w-full max-w-sm rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] p-6 shadow-2xl animate-fade-up">
+        <h2 className="mb-1 font-semibold text-[var(--text-1)]">Weekly Goals</h2>
+        <p className="mb-6 text-xs text-[var(--text-3)]">Set your targets for Mon – Sun.</p>
 
         <div className="space-y-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-200">Strength workouts</p>
-              <p className="text-xs text-gray-500">Sessions logged per week</p>
+              <p className="text-sm font-medium text-[var(--text-1)]">Strength workouts</p>
+              <p className="text-xs text-[var(--text-3)]">Sessions logged per week</p>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => setS(v => String(Math.max(0, (parseInt(v) || 0) - 1)))}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-700 bg-gray-800 text-gray-300 hover:bg-gray-700"
-              >−</button>
-              <input type="number" min="0" max="99" value={s}
-                onChange={e => setS(e.target.value)} className={inputCls}/>
-              <button
-                onClick={() => setS(v => String(Math.min(99, (parseInt(v) || 0) + 1)))}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-700 bg-gray-800 text-gray-300 hover:bg-gray-700"
-              >+</button>
+              <button onClick={() => setS(v => String(Math.max(0, (parseInt(v) || 0) - 1)))} className={stepBtn}>−</button>
+              <input type="number" min="0" max="99" value={s} onChange={e => setS(e.target.value)} className={inputCls}/>
+              <button onClick={() => setS(v => String(Math.min(99, (parseInt(v) || 0) + 1)))} className={stepBtn}>+</button>
             </div>
           </div>
 
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-200">Cardio workouts</p>
-              <p className="text-xs text-gray-500">Runs + rows logged per week</p>
+              <p className="text-sm font-medium text-[var(--text-1)]">Cardio workouts</p>
+              <p className="text-xs text-[var(--text-3)]">Runs + rows logged per week</p>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => setC(v => String(Math.max(0, (parseInt(v) || 0) - 1)))}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-700 bg-gray-800 text-gray-300 hover:bg-gray-700"
-              >−</button>
-              <input type="number" min="0" max="99" value={c}
-                onChange={e => setC(e.target.value)} className={inputCls}/>
-              <button
-                onClick={() => setC(v => String(Math.min(99, (parseInt(v) || 0) + 1)))}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-700 bg-gray-800 text-gray-300 hover:bg-gray-700"
-              >+</button>
+              <button onClick={() => setC(v => String(Math.max(0, (parseInt(v) || 0) - 1)))} className={stepBtn}>−</button>
+              <input type="number" min="0" max="99" value={c} onChange={e => setC(e.target.value)} className={inputCls}/>
+              <button onClick={() => setC(v => String(Math.min(99, (parseInt(v) || 0) + 1)))} className={stepBtn}>+</button>
             </div>
           </div>
         </div>
 
         <div className="mt-6 flex gap-3">
-          <button onClick={onClose}
-            className="flex-1 rounded-lg border border-gray-700 py-2 text-sm text-gray-400 hover:text-gray-200">
+          <button onClick={onClose} className="flex-1 rounded-lg border border-[var(--border)] py-2 text-sm font-medium text-[var(--text-2)] hover:text-[var(--text-1)] transition-colors">
             Cancel
           </button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-indigo-600 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+          <button onClick={handleSave} disabled={saving}
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-gradient-to-b from-indigo-500 to-indigo-600 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-400 hover:to-indigo-500 disabled:opacity-50 transition-all"
           >
             {saving && <LoadingSpinner size="sm"/>}
             Save
@@ -198,35 +184,22 @@ function HistoryRow({ record }: { record: WeekHistoryRecord }) {
   const label = formatWeekRange(record.week_start, record.week_end);
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-gray-800 bg-gray-800/40 px-3 py-2.5">
-      {/* Overall indicator */}
-      <span className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-        bothMet ? 'bg-emerald-900/60 text-emerald-400' : 'bg-red-900/40 text-red-400'
+    <div className="flex items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--bg-subtle)] px-3 py-2.5">
+      <span className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+        bothMet ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-500'
       }`}>
         {bothMet ? '✓' : '✗'}
       </span>
-
-      {/* Week label */}
-      <span className="w-28 flex-shrink-0 text-xs text-gray-400">{label}</span>
-
-      {/* Strength pill */}
-      <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
-        record.strength_met
-          ? 'bg-indigo-900/50 text-indigo-300'
-          : 'bg-gray-700/60 text-gray-400'
+      <span className="w-28 flex-shrink-0 text-xs font-medium text-[var(--text-2)]">{label}</span>
+      <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${
+        record.strength_met ? 'bg-[var(--accent-light)] text-indigo-700 dark:text-indigo-300' : 'bg-[var(--bg-subtle)] text-[var(--text-3)]'
       }`}>
-        <span className="opacity-60">💪</span>
-        {record.strength_completed}/{record.strength_goal}
+        💪 {record.strength_completed}/{record.strength_goal}
       </span>
-
-      {/* Cardio pill */}
-      <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
-        record.cardio_met
-          ? 'bg-emerald-900/50 text-emerald-300'
-          : 'bg-gray-700/60 text-gray-400'
+      <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${
+        record.cardio_met ? 'bg-[var(--green-light)] text-emerald-700 dark:text-emerald-300' : 'bg-[var(--bg-subtle)] text-[var(--text-3)]'
       }`}>
-        <span className="opacity-60">🏃</span>
-        {record.cardio_completed}/{record.cardio_goal}
+        🏃 {record.cardio_completed}/{record.cardio_goal}
       </span>
     </div>
   );
@@ -246,19 +219,19 @@ export default function WeeklyGoalsCard() {
 
   return (
     <>
-      <div className="rounded-xl border border-gray-800 bg-gray-900 p-5">
+      <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5 shadow-card">
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h2 className="font-semibold text-gray-200">Weekly Goals</h2>
+            <h2 className="text-base font-semibold text-[var(--text-1)]">Weekly Goals</h2>
             {goals && (
-              <p className="mt-0.5 text-xs text-gray-500">
+              <p className="mt-0.5 text-xs text-[var(--text-3)]">
                 {formatWeekRange(goals.week_start, goals.week_end)}
               </p>
             )}
           </div>
           <button
             onClick={() => setEditing(true)}
-            className="rounded-lg border border-gray-700 px-3 py-1.5 text-xs text-gray-400 hover:border-gray-500 hover:text-gray-200"
+            className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--text-2)] hover:border-[var(--border-strong)] hover:text-[var(--text-1)] transition-colors"
           >
             Edit goals
           </button>
@@ -289,10 +262,10 @@ export default function WeeklyGoalsCard() {
 
         {/* History toggle */}
         {history && history.length > 0 && (
-          <div className="mt-4 border-t border-gray-800 pt-4">
+          <div className="mt-4 border-t border-[var(--border)] pt-4">
             <button
               onClick={() => setShowHistory(v => !v)}
-              className="flex w-full items-center justify-between text-xs text-gray-500 hover:text-gray-300"
+              className="flex w-full items-center justify-between text-xs font-medium text-[var(--text-3)] hover:text-[var(--text-1)] transition-colors"
             >
               <span className="font-medium uppercase tracking-wider">
                 Goal History ({history.length} week{history.length !== 1 ? 's' : ''})

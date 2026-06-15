@@ -3,7 +3,7 @@ import type { Exercise, MuscleGroup } from '../../types';
 import { useExercises, useMuscleGroups } from '../../hooks/useExercises';
 import ExerciseSearchBar from '../exercises/ExerciseSearchBar';
 import ExerciseCard from '../exercises/ExerciseCard';
-import LoadingSpinner from '../shared/LoadingSpinner';
+import { CardSkeleton } from '../shared/Skeleton';
 
 interface Props {
   onSelect: (exercise: Exercise) => void;
@@ -52,14 +52,14 @@ export default function AddExerciseModal({ onSelect, onClose }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="flex h-[80vh] w-full max-w-lg flex-col rounded-2xl border border-gray-700 bg-gray-900 shadow-2xl">
-        <div className="flex items-center justify-between border-b border-gray-800 px-5 py-4">
-          <h2 className="font-semibold text-gray-100">Add Exercise</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-300">✕</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm animate-fade-in">
+      <div className="flex h-[80vh] w-full max-w-lg flex-col rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] shadow-2xl animate-fade-up">
+        <div className="flex items-center justify-between border-b border-[var(--border)] px-5 py-4">
+          <h2 className="font-semibold text-[var(--text-1)]">Add Exercise</h2>
+          <button onClick={onClose} className="rounded-lg p-1 text-[var(--text-3)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-1)] transition-colors">✕</button>
         </div>
 
-        <div className="space-y-2 px-5 pt-3 pb-2">
+        <div className="space-y-2.5 px-5 pt-3 pb-2">
           <ExerciseSearchBar value={search} onChange={setSearch} />
 
           {chips.length > 0 && (
@@ -68,10 +68,10 @@ export default function AddExerciseModal({ onSelect, onClose }: Props) {
                 <button
                   key={chip.label}
                   onClick={() => handleChipClick(chip)}
-                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  className={`rounded-full px-3 py-1 text-xs font-semibold transition-all duration-150 ${
                     activeChip?.label === chip.label
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200'
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'bg-[var(--bg-subtle)] text-[var(--text-2)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-1)]'
                   }`}
                 >
                   {chip.label}
@@ -83,24 +83,16 @@ export default function AddExerciseModal({ onSelect, onClose }: Props) {
 
         <div className="flex-1 overflow-y-auto px-5 pb-5">
           {isLoading ? (
-            <div className="flex justify-center pt-8">
-              <LoadingSpinner />
+            <div className="flex flex-col gap-2 pt-2 stagger">
+              {Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />)}
             </div>
           ) : (
             <div className="flex flex-col gap-2">
               {exercises?.map((ex) => (
-                <ExerciseCard
-                  key={ex.id}
-                  exercise={ex}
-                  selectable
-                  onSelect={(e) => {
-                    onSelect(e);
-                    onClose();
-                  }}
-                />
+                <ExerciseCard key={ex.id} exercise={ex} selectable onSelect={(e) => { onSelect(e); onClose(); }} />
               ))}
               {exercises?.length === 0 && (
-                <p className="py-8 text-center text-sm text-gray-500">No exercises found.</p>
+                <p className="py-8 text-center text-sm text-[var(--text-2)]">No exercises found.</p>
               )}
             </div>
           )}

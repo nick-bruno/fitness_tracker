@@ -83,9 +83,14 @@ function getDetail(info: RegionInfo | undefined): string {
   return `${info.sets} sets · last trained ${ago}`;
 }
 
-const BG = '#0f172a';
-const BG_S = '#1e293b';
+// Use CSS variables so neutral body color switches with dark mode.
+// SVG fill attributes don't support CSS vars — use inline style instead.
+const BG_STYLE   = { fill: 'var(--svg-neutral)',   stroke: 'var(--svg-neutral-s)' };
+const MUSCLE_SW  = 1;
 const SW = 1;
+// Keep BG/BG_S for any remaining references
+const BG   = 'var(--svg-neutral)';
+const BG_S = 'var(--svg-neutral-s)';
 
 export default function BodySilhouette({ summary }: Props) {
   const regions = buildRegions(summary);
@@ -139,10 +144,10 @@ export default function BodySilhouette({ summary }: Props) {
 
         {/* ── Body silhouette background ── */}
         {/* Head */}
-        <circle cx="105" cy="33" r="26" fill={BG} stroke={BG_S} strokeWidth={SW}/>
+        <circle cx="105" cy="33" r="26" style={BG_STYLE} strokeWidth={SW}/>
         {/* Neck */}
         <path d="M 97,57 C 95,60 94,68 95,76 L 115,76 C 116,68 115,60 113,57 Z"
-          fill={BG} stroke={BG_S} strokeWidth={SW}/>
+          style={BG_STYLE} strokeWidth={SW}/>
         {/* Torso */}
         <path d="
           M 105,59
@@ -170,7 +175,7 @@ export default function BodySilhouette({ summary }: Props) {
           C 152,86 140,80 128,78
           L 119,68
           C 115,62 110,59 105,59 Z"
-          fill={BG} stroke={BG_S} strokeWidth={SW}/>
+          style={BG_STYLE} strokeWidth={SW}/>
         {/* Left arm */}
         <path d="
           M 54,102 C 50,108 46,118 44,130
@@ -179,7 +184,7 @@ export default function BodySilhouette({ summary }: Props) {
           L 54,331 C 60,330 64,324 63,316
           L 59,242 C 62,234 63,224 62,214
           L 66,130 C 66,120 64,110 60,104 Z"
-          fill={BG} stroke={BG_S} strokeWidth={SW}/>
+          style={BG_STYLE} strokeWidth={SW}/>
         {/* Right arm */}
         <path d="
           M 156,104 C 146,110 144,120 144,130
@@ -188,7 +193,7 @@ export default function BodySilhouette({ summary }: Props) {
           L 166,331 C 172,330 176,324 175,316
           L 171,242 C 173,234 174,224 172,214
           L 166,130 C 164,118 160,108 156,102 Z"
-          fill={BG} stroke={BG_S} strokeWidth={SW}/>
+          style={BG_STYLE} strokeWidth={SW}/>
         {/* Left leg */}
         <path d="
           M 65,272 C 59,274 53,282 51,296
@@ -199,7 +204,7 @@ export default function BodySilhouette({ summary }: Props) {
           L 83,448 C 86,430 85,418 82,412
           L 76,413 C 84,410 88,400 87,390
           L 83,296 C 81,282 75,274 68,272 Z"
-          fill={BG} stroke={BG_S} strokeWidth={SW}/>
+          style={BG_STYLE} strokeWidth={SW}/>
         {/* Right leg */}
         <path d="
           M 145,272 C 135,274 129,282 127,296
@@ -210,7 +215,7 @@ export default function BodySilhouette({ summary }: Props) {
           L 164,448 C 166,430 165,418 162,412
           L 156,413 C 164,410 168,400 167,390
           L 163,296 C 161,282 155,274 148,272 Z"
-          fill={BG} stroke={BG_S} strokeWidth={SW}/>
+          style={BG_STYLE} strokeWidth={SW}/>
 
         {/* ── Muscle regions ── */}
 
@@ -250,7 +255,7 @@ export default function BodySilhouette({ summary }: Props) {
 
         {/* Hip / pelvis bridge (neutral) */}
         <path d="M 53,258 C 53,264 56,270 64,272 L 96,274 L 96,270 C 94,264 96,260 105,258 C 114,260 116,264 114,270 L 114,274 L 146,272 C 154,270 157,264 157,258 Z"
-          fill={BG} stroke={BG_S} strokeWidth={SW}/>
+          style={BG_STYLE} strokeWidth={SW}/>
 
         {/* Quads — rounded thigh with natural taper */}
         <path d="M 65,276 C 59,278 53,288 51,304 L 48,392 C 47,404 52,414 62,416 L 78,416 C 88,414 93,402 92,390 L 90,304 C 90,288 85,276 78,274 C 73,272 69,274 65,276 Z"
@@ -260,15 +265,15 @@ export default function BodySilhouette({ summary }: Props) {
 
         {/* Shins (neutral) */}
         <path d="M 52,420 C 49,426 48,440 50,458 L 52,526 C 54,532 58,535 64,535 L 78,535 C 84,535 87,530 86,523 L 84,458 C 86,440 85,426 82,420 Z"
-          fill={BG} stroke={BG_S} strokeWidth={SW}/>
+          style={BG_STYLE} strokeWidth={SW}/>
         <path d="M 128,420 C 125,426 124,440 126,458 L 128,523 C 127,530 130,535 136,535 L 150,535 C 156,535 160,532 162,526 L 164,458 C 166,440 165,426 162,420 Z"
-          fill={BG} stroke={BG_S} strokeWidth={SW}/>
+          style={BG_STYLE} strokeWidth={SW}/>
 
         {/* Hands (neutral) */}
         <path d="M 32,318 C 30,322 30,330 34,334 L 52,334 C 56,334 60,328 60,322 Z"
-          fill={BG} stroke={BG_S} strokeWidth={SW}/>
+          style={BG_STYLE} strokeWidth={SW}/>
         <path d="M 150,322 C 150,328 154,334 158,334 L 176,334 C 180,330 180,322 178,318 Z"
-          fill={BG} stroke={BG_S} strokeWidth={SW}/>
+          style={BG_STYLE} strokeWidth={SW}/>
 
 
         {/* ═══════════════════════════════════════
@@ -277,9 +282,9 @@ export default function BodySilhouette({ summary }: Props) {
         <text x="315" y="534" textAnchor="middle" fill="#475569" fontSize="11" fontFamily="sans-serif" letterSpacing="2">BACK</text>
 
         {/* ── Body silhouette background ── */}
-        <circle cx="315" cy="33" r="26" fill={BG} stroke={BG_S} strokeWidth={SW}/>
+        <circle cx="315" cy="33" r="26" style={BG_STYLE} strokeWidth={SW}/>
         <path d="M 307,57 C 305,60 304,68 305,76 L 325,76 C 326,68 325,60 323,57 Z"
-          fill={BG} stroke={BG_S} strokeWidth={SW}/>
+          style={BG_STYLE} strokeWidth={SW}/>
         {/* Torso back */}
         <path d="
           M 315,59
@@ -303,7 +308,7 @@ export default function BodySilhouette({ summary }: Props) {
           C 372,114 373,104 368,96
           C 362,86 350,80 338,78 L 329,68
           C 325,62 320,59 315,59 Z"
-          fill={BG} stroke={BG_S} strokeWidth={SW}/>
+          style={BG_STYLE} strokeWidth={SW}/>
         {/* Left arm back */}
         <path d="
           M 264,102 C 254,110 252,120 252,130
@@ -312,7 +317,7 @@ export default function BodySilhouette({ summary }: Props) {
           L 273,331 C 279,330 283,324 282,316
           L 278,242 C 281,234 282,224 281,214
           L 285,130 C 285,120 283,110 278,104 Z"
-          fill={BG} stroke={BG_S} strokeWidth={SW}/>
+          style={BG_STYLE} strokeWidth={SW}/>
         {/* Right arm back */}
         <path d="
           M 366,104 C 347,110 345,120 345,130
@@ -321,7 +326,7 @@ export default function BodySilhouette({ summary }: Props) {
           L 367,331 C 373,330 377,324 376,316
           L 372,242 C 375,234 376,224 375,214
           L 379,130 C 379,120 376,108 366,102 Z"
-          fill={BG} stroke={BG_S} strokeWidth={SW}/>
+          style={BG_STYLE} strokeWidth={SW}/>
         {/* Left leg back */}
         <path d="
           M 275,272 C 269,274 263,282 261,296
@@ -332,7 +337,7 @@ export default function BodySilhouette({ summary }: Props) {
           L 293,448 C 296,430 295,418 292,412
           L 286,413 C 294,410 298,400 297,390
           L 293,296 C 291,282 285,274 278,272 Z"
-          fill={BG} stroke={BG_S} strokeWidth={SW}/>
+          style={BG_STYLE} strokeWidth={SW}/>
         {/* Right leg back */}
         <path d="
           M 355,272 C 348,274 342,282 337,296
@@ -343,7 +348,7 @@ export default function BodySilhouette({ summary }: Props) {
           L 374,448 C 376,430 375,418 372,412
           L 366,413 C 374,410 378,400 377,390
           L 373,296 C 371,282 365,274 358,272 Z"
-          fill={BG} stroke={BG_S} strokeWidth={SW}/>
+          style={BG_STYLE} strokeWidth={SW}/>
 
         {/* ── Muscle regions ── */}
 
@@ -385,7 +390,7 @@ export default function BodySilhouette({ summary }: Props) {
 
         {/* Hip back (neutral bridge) */}
         <path d="M 273,268 C 273,268 286,280 315,280 C 344,280 357,268 357,268 L 355,274 C 345,282 315,284 315,284 C 315,284 285,282 275,274 Z"
-          fill={BG} stroke={BG_S} strokeWidth={SW}/>
+          style={BG_STYLE} strokeWidth={SW}/>
 
         {/* Glutes — large rounded shapes */}
         <path d="M 275,276 C 269,278 263,288 261,304 L 259,348 C 259,362 265,374 277,378 L 299,380 C 307,378 313,370 314,360 L 315,284 Z"
@@ -407,9 +412,9 @@ export default function BodySilhouette({ summary }: Props) {
 
         {/* Hands back (neutral) */}
         <path d="M 242,318 C 240,322 240,330 244,334 L 262,334 C 266,334 270,328 270,322 Z"
-          fill={BG} stroke={BG_S} strokeWidth={SW}/>
+          style={BG_STYLE} strokeWidth={SW}/>
         <path d="M 360,322 C 360,328 364,334 368,334 L 386,334 C 390,330 390,322 388,318 Z"
-          fill={BG} stroke={BG_S} strokeWidth={SW}/>
+          style={BG_STYLE} strokeWidth={SW}/>
 
       </svg>
 

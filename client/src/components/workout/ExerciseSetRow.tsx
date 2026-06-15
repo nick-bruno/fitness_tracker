@@ -13,33 +13,26 @@ interface Props {
   onAddSet?: () => void;
 }
 
+const inputCls = 'rounded-lg border border-[var(--border)] bg-[var(--bg-subtle)] px-2 py-1.5 text-sm text-stone-900 focus:border-indigo-400 focus:outline-none focus:bg-white transition-colors';
+
 export default function ExerciseSetRow({ set, onChange, onRemove, isLast, onAddSet }: Props) {
   return (
     <div className="flex items-center gap-2">
-      <span className="w-6 text-center text-xs text-gray-500">{set.set_number}</span>
+      <span className="w-6 text-center text-xs font-medium text-stone-400">{set.set_number}</span>
       <input
-        type="number"
-        min="0"
-        placeholder="Reps"
+        type="number" min="0" placeholder="—"
         value={set.reps}
         onChange={(e) => onChange({ ...set, reps: e.target.value })}
-        className="w-20 rounded border border-gray-700 bg-gray-800 px-2 py-1 text-sm text-gray-100 focus:border-indigo-500 focus:outline-none"
+        className={`w-20 ${inputCls}`}
       />
       <input
-        type="number"
-        min="0"
-        step="0.5"
-        placeholder="lb"
+        type="number" min="0" step="0.5" placeholder="—"
         value={set.weight_lb}
         onChange={(e) => onChange({ ...set, weight_lb: e.target.value })}
-        className="w-20 rounded border border-gray-700 bg-gray-800 px-2 py-1 text-sm text-gray-100 focus:border-indigo-500 focus:outline-none"
+        className={`w-20 ${inputCls}`}
       />
       <input
-        type="number"
-        min="1"
-        max="10"
-        step="0.5"
-        placeholder="RPE"
+        type="number" min="1" max="10" step="0.5" placeholder="—"
         value={set.rpe}
         onChange={(e) => onChange({ ...set, rpe: e.target.value })}
         onKeyDown={(e) => {
@@ -48,13 +41,9 @@ export default function ExerciseSetRow({ set, onChange, onRemove, isLast, onAddS
             onAddSet();
           }
         }}
-        className="w-16 rounded border border-gray-700 bg-gray-800 px-2 py-1 text-sm text-gray-100 focus:border-indigo-500 focus:outline-none"
+        className={`w-16 ${inputCls}`}
       />
-      <button
-        onClick={onRemove}
-        className="text-gray-600 hover:text-red-400"
-        title="Remove set"
-      >
+      <button onClick={onRemove} className="rounded p-0.5 text-stone-300 hover:text-red-500 transition-colors" title="Remove set">
         ×
       </button>
     </div>
