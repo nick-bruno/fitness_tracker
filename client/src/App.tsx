@@ -7,6 +7,8 @@ import WorkoutHistoryPage from './pages/WorkoutHistoryPage';
 import RecommendationsPage from './pages/RecommendationsPage';
 import LogCardioPage from './pages/LogCardioPage';
 import CardioHistoryPage from './pages/CardioHistoryPage';
+import LogActivityPage from './pages/LogActivityPage';
+import ActivityHistoryPage from './pages/ActivityHistoryPage';
 
 export default function App() {
   return (
@@ -26,6 +28,9 @@ export default function App() {
           <Route path="/log-row" element={<LogCardioPage activityType="row" />} />
           <Route path="/log-row/:cardioId" element={<LogCardioPage activityType="row" />} />
           <Route path="/rows" element={<CardioHistoryPage activityType="row" />} />
+          <Route path="/log-activity" element={<LogActivityPage />} />
+          <Route path="/log-activity/:activityId" element={<LogActivityPage />} />
+          <Route path="/activities" element={<ActivityHistoryPage />} />
         </Routes>
       </AppShell>
     </BrowserRouter>

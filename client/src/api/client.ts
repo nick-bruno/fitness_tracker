@@ -112,7 +112,7 @@ export const updateRun = (id: number, data: RunCreateInput) =>
 export const deleteRun = (id: number) =>
   request<{ success: boolean }>(`/runs/${id}`, { method: 'DELETE' });
 
-export const fetchRunsSummary = (days: number, type: 'run' | 'row') =>
+export const fetchRunsSummary = (days: number, type: string) =>
   request<{ summary: RunWeeklySummary }>(`/runs/summary?days=${days}&type=${type}`).then((r) => r.summary);
 
 export const importNrcRuns = async (file: File): Promise<NrcImportResult> => {
@@ -128,13 +128,13 @@ export const importNrcRuns = async (file: File): Promise<NrcImportResult> => {
 };
 
 // Goals
-export const fetchGoals = () =>
-  request<{ goals: import('../types').GoalsWithProgress }>('/goals').then((r) => r.goals);
+export const fetchGoals = (offset = 0) =>
+  request<{ goals: import('../types').GoalsWithProgress }>(`/goals${offset ? `?offset=${offset}` : ''}`).then((r) => r.goals);
 
-export const updateGoals = (strength_goal: number, cardio_goal: number) =>
+export const updateGoals = (strength_goal: number, cardio_goal: number, week_offset = 0) =>
   request<{ goals: import('../types').GoalsWithProgress }>('/goals', {
     method: 'PUT',
-    ...json({ strength_goal, cardio_goal }),
+    ...json({ strength_goal, cardio_goal, week_offset }),
   }).then((r) => r.goals);
 
 export const fetchGoalsHistory = (weeks = 12) =>

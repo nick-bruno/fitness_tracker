@@ -4,14 +4,26 @@ import { listRuns, getRunById, createRun, updateRun, deleteRun, getRunsSummary }
 
 const router = Router();
 
-const RunSchema = z.object({
-  type: z.enum(['run', 'row']),
-  title: z.string().optional(),
-  logged_at: z.string().datetime().optional(),
-  distance_miles: z.number().positive(),
-  duration_seconds: z.number().int().positive(),
-  notes: z.string().optional(),
-});
+const MISC_ACTIVITY_TYPES = ['tennis', 'golf', 'pickleball'] as const;
+
+const RunSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.enum(['run', 'row']),
+    title: z.string().optional(),
+    logged_at: z.string().datetime().optional(),
+    distance_miles: z.number().positive(),
+    duration_seconds: z.number().int().positive(),
+    notes: z.string().optional(),
+  }),
+  z.object({
+    type: z.enum(MISC_ACTIVITY_TYPES),
+    title: z.string().optional(),
+    logged_at: z.string().datetime().optional(),
+    distance_miles: z.number().optional(),
+    duration_seconds: z.number().int().positive(),
+    notes: z.string().optional(),
+  }),
+]);
 
 // Must come before /:id so "summary" isn't parsed as an ID
 router.get('/summary', (req, res) => {

@@ -41,7 +41,7 @@ export default function LogCardioPage({ activityType }: Props) {
     if (existingRun) {
       setTitle(existingRun.title ?? '');
       setLoggedAt(toLocalDatetimeString(existingRun.logged_at));
-      setDistanceMiles(String(existingRun.distance_miles));
+      setDistanceMiles(String(existingRun.distance_miles ?? ''));
       setDurationMinutes(String(Math.floor(existingRun.duration_seconds / 60)));
       setDurationSeconds(String(existingRun.duration_seconds % 60));
       setNotes(existingRun.notes ?? '');

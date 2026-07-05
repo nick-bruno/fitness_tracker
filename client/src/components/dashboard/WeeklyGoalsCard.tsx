@@ -11,22 +11,27 @@ interface RingProps {
   completed: number;
   goal: number;
   color: 'indigo' | 'emerald';
+  planned?: boolean;
 }
 
-function GoalRing({ label, sublabel, completed, goal, color }: RingProps) {
+function GoalRing({ label, sublabel, completed, goal, color, planned }: RingProps) {
   const r = 48;
   const circ = 2 * Math.PI * r;
   const progress = goal > 0 ? Math.min(completed / goal, 1) : 0;
   const offset = circ * (1 - progress);
-  const done = completed >= goal && goal > 0;
+  const done = !planned && completed >= goal && goal > 0;
 
   const isDark  = document.documentElement.classList.contains('dark');
   const track   = isDark
     ? (color === 'indigo' ? '#1e1b4b' : '#022c22')
     : (color === 'indigo' ? '#E0E7FF' : '#D1FAE5');
-  const fill    = color === 'indigo' ? (done ? '#4F46E5' : '#6366F1') : (done ? '#059669' : '#10B981');
+  const fill    = planned
+    ? (isDark ? '#4b5563' : '#d1d5db')
+    : color === 'indigo' ? (done ? '#4F46E5' : '#6366F1') : (done ? '#059669' : '#10B981');
   const glow    = fill;
-  const textClr = isDark
+  const textClr = planned
+    ? (isDark ? '#6b7280' : '#9ca3af')
+    : isDark
     ? (color === 'indigo' ? '#a5b4fc' : '#6ee7b7')
     : done
       ? (color === 'indigo' ? '#3730A3' : '#065F46')
@@ -67,7 +72,7 @@ function GoalRing({ label, sublabel, completed, goal, color }: RingProps) {
             fontWeight="700"
             fontFamily="sans-serif"
           >
-            {completed}
+            {planned ? '–' : completed}
           </text>
           {/* Denominator */}
           <text
@@ -103,9 +108,10 @@ interface EditProps {
   onSave: (s: number, c: number) => void;
   onClose: () => void;
   saving: boolean;
+  weekDescription: string;
 }
 
-function EditGoalsModal({ strengthGoal, cardioGoal, onSave, onClose, saving }: EditProps) {
+function EditGoalsModal({ strengthGoal, cardioGoal, onSave, onClose, saving, weekDescription }: EditProps) {
   const [s, setS] = useState(String(strengthGoal));
   const [c, setC] = useState(String(cardioGoal));
 
@@ -124,7 +130,7 @@ function EditGoalsModal({ strengthGoal, cardioGoal, onSave, onClose, saving }: E
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm animate-fade-in">
       <div className="w-full max-w-sm rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] p-6 shadow-2xl animate-fade-up">
         <h2 className="mb-1 font-semibold text-[var(--text-1)]">Weekly Goals</h2>
-        <p className="mb-6 text-xs text-[var(--text-3)]">Set your targets for Mon – Sun.</p>
+        <p className="mb-6 text-xs text-[var(--text-3)]">{weekDescription}</p>
 
         <div className="space-y-5">
           <div className="flex items-center justify-between">
@@ -205,17 +211,28 @@ function HistoryRow({ record }: { record: WeekHistoryRecord }) {
   );
 }
 
+const MAX_FUTURE_WEEKS = 4;
+
 export default function WeeklyGoalsCard() {
-  const { data: goals, isLoading } = useGoals();
+  const [weekOffset, setWeekOffset] = useState(0);
+  const { data: goals, isLoading } = useGoals(weekOffset);
   const { data: history } = useGoalsHistory(12);
   const updateMutation = useUpdateGoals();
   const [editing, setEditing] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
 
+  const isFuture = weekOffset > 0;
+
   const handleSave = async (strength_goal: number, cardio_goal: number) => {
-    await updateMutation.mutateAsync({ strength_goal, cardio_goal });
+    await updateMutation.mutateAsync({ strength_goal, cardio_goal, week_offset: weekOffset });
     setEditing(false);
   };
+
+  const weekLabel = weekOffset === 0
+    ? 'This week'
+    : weekOffset === 1
+    ? 'Next week'
+    : `In ${weekOffset} weeks`;
 
   return (
     <>
@@ -229,13 +246,45 @@ export default function WeeklyGoalsCard() {
               </p>
             )}
           </div>
-          <button
-            onClick={() => setEditing(true)}
-            className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--text-2)] hover:border-[var(--border-strong)] hover:text-[var(--text-1)] transition-colors"
-          >
-            Edit goals
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Week navigation */}
+            <div className="flex items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--bg-subtle)] px-1 py-0.5">
+              <button
+                onClick={() => setWeekOffset(o => Math.max(0, o - 1))}
+                disabled={weekOffset === 0}
+                className="flex h-6 w-6 items-center justify-center rounded text-[var(--text-3)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-1)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                title="Previous week"
+              >
+                ‹
+              </button>
+              <span className="min-w-[64px] text-center text-xs font-medium text-[var(--text-2)]">
+                {weekLabel}
+              </span>
+              <button
+                onClick={() => setWeekOffset(o => Math.min(MAX_FUTURE_WEEKS, o + 1))}
+                disabled={weekOffset === MAX_FUTURE_WEEKS}
+                className="flex h-6 w-6 items-center justify-center rounded text-[var(--text-3)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-1)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                title="Next week"
+              >
+                ›
+              </button>
+            </div>
+            <button
+              onClick={() => setEditing(true)}
+              className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--text-2)] hover:border-[var(--border-strong)] hover:text-[var(--text-1)] transition-colors"
+            >
+              {isFuture ? 'Plan goals' : 'Edit goals'}
+            </button>
+          </div>
         </div>
+
+        {/* Future-week banner */}
+        {isFuture && (
+          <div className="mb-3 flex items-center gap-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 px-3 py-2 text-xs text-indigo-600 dark:text-indigo-300">
+            <span>📅</span>
+            <span>Planned goals — no workouts logged yet for this week.</span>
+          </div>
+        )}
 
         {isLoading ? (
           <div className="flex justify-center py-8">
@@ -245,17 +294,19 @@ export default function WeeklyGoalsCard() {
           <div className="flex justify-around py-2">
             <GoalRing
               label="Strength"
-              sublabel={`${goals.strength_completed} of ${goals.strength_goal} workouts`}
-              completed={goals.strength_completed}
+              sublabel={isFuture ? `Goal: ${goals.strength_goal} workouts` : `${goals.strength_completed} of ${goals.strength_goal} workouts`}
+              completed={isFuture ? 0 : goals.strength_completed}
               goal={goals.strength_goal}
               color="indigo"
+              planned={isFuture}
             />
             <GoalRing
               label="Cardio"
-              sublabel={`${goals.cardio_completed} of ${goals.cardio_goal} sessions`}
-              completed={goals.cardio_completed}
+              sublabel={isFuture ? `Goal: ${goals.cardio_goal} sessions` : `${goals.cardio_completed} of ${goals.cardio_goal} sessions`}
+              completed={isFuture ? 0 : goals.cardio_completed}
               goal={goals.cardio_goal}
               color="emerald"
+              planned={isFuture}
             />
           </div>
         ) : null}
@@ -291,6 +342,11 @@ export default function WeeklyGoalsCard() {
           onSave={handleSave}
           onClose={() => setEditing(false)}
           saving={updateMutation.isPending}
+          weekDescription={
+            isFuture
+              ? `Planning goals for ${formatWeekRange(goals.week_start, goals.week_end)}.`
+              : 'Set your targets for Mon – Sun.'
+          }
         />
       )}
     </>

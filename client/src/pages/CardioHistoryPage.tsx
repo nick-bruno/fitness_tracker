@@ -175,7 +175,7 @@ export default function CardioHistoryPage({ activityType }: Props) {
               </div>
               <div className="mt-3 flex gap-6">
                 <div>
-                  <p className={`text-xl font-bold ${l.color}`}>{run.distance_miles.toFixed(2)}</p>
+                  <p className={`text-xl font-bold ${l.color}`}>{(run.distance_miles ?? 0).toFixed(2)}</p>
                   <p className="text-xs text-gray-500">miles</p>
                 </div>
                 <div>
@@ -183,7 +183,7 @@ export default function CardioHistoryPage({ activityType }: Props) {
                   <p className="text-xs text-gray-500">duration</p>
                 </div>
                 <div>
-                  <p className={`text-xl font-bold ${l.color}`}>{formatPace(run.duration_seconds, run.distance_miles)}</p>
+                  <p className={`text-xl font-bold ${l.color}`}>{formatPace(run.duration_seconds, run.distance_miles ?? 0)}</p>
                   <p className="text-xs text-gray-500">avg pace</p>
                 </div>
               </div>

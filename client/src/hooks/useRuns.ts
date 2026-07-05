@@ -49,7 +49,7 @@ export function useDeleteRun() {
   });
 }
 
-export function useRunsSummary(days: number, type: 'run' | 'row') {
+export function useRunsSummary(days: number, type: string) {
   return useQuery({
     queryKey: ['runs-summary', days, type],
     queryFn: () => fetchRunsSummary(days, type),

@@ -61,12 +61,15 @@ export interface WorkoutSummary {
   exercise_names: string[];
 }
 
+export type ActivityType = 'run' | 'row' | 'tennis' | 'golf' | 'pickleball';
+export const MISC_ACTIVITY_TYPES: ActivityType[] = ['tennis', 'golf', 'pickleball'];
+
 export interface Run {
   id: number;
-  type: 'run' | 'row';
+  type: ActivityType;
   title: string | null;
   logged_at: string;
-  distance_miles: number;
+  distance_miles: number | null;
   duration_seconds: number;
   notes: string | null;
   source: string;
@@ -74,10 +77,10 @@ export interface Run {
 }
 
 export interface RunCreateInput {
-  type: 'run' | 'row';
+  type: ActivityType;
   title?: string;
   logged_at?: string;
-  distance_miles: number;
+  distance_miles?: number | null;
   duration_seconds: number;
   notes?: string;
   source?: string;

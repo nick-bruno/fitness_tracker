@@ -3,6 +3,8 @@ import type { Run, RunCreateInput, RunWeeklySummary } from '../types';
 
 type P = Record<string, string | number | null | bigint>;
 
+const MISC_TYPES_SQL = "('tennis', 'golf', 'pickleball')";
+
 export function listRuns(opts: {
   limit: number;
   offset: number;
@@ -13,7 +15,9 @@ export function listRuns(opts: {
   const conditions: string[] = [];
   const filterParams: P = {};
 
-  if (opts.type) {
+  if (opts.type === 'activity') {
+    conditions.push(`type IN ${MISC_TYPES_SQL}`);
+  } else if (opts.type) {
     conditions.push('type = $type');
     filterParams['type'] = opts.type;
   }
@@ -67,7 +71,7 @@ export function createRun(data: RunCreateInput): Run {
       type: data.type,
       title: data.title ?? null,
       logged_at: data.logged_at ?? new Date().toISOString(),
-      distance_miles: data.distance_miles,
+      distance_miles: data.distance_miles ?? null,
       duration_seconds: data.duration_seconds,
       notes: data.notes ?? null,
       source: data.source ?? 'manual',
@@ -86,7 +90,7 @@ export function updateRun(id: number, data: RunCreateInput): Run | undefined {
     id,
     title: data.title ?? null,
     logged_at: data.logged_at ?? new Date().toISOString(),
-    distance_miles: data.distance_miles,
+    distance_miles: data.distance_miles ?? null,
     duration_seconds: data.duration_seconds,
     notes: data.notes ?? null,
   });
@@ -100,6 +104,12 @@ export function deleteRun(id: number): boolean {
 }
 
 export function getRunsSummary(lookbackDays: number, type: string): RunWeeklySummary {
+  const isActivityGroup = type === 'activity';
+  const typeFilter = isActivityGroup ? `type IN ${MISC_TYPES_SQL}` : 'type = $type';
+  const params = isActivityGroup
+    ? { days: `-${lookbackDays} days` }
+    : { type, days: `-${lookbackDays} days` };
+
   return db
     .prepare(
       `SELECT
@@ -107,7 +117,7 @@ export function getRunsSummary(lookbackDays: number, type: string): RunWeeklySum
          COALESCE(SUM(distance_miles), 0) AS total_miles,
          COALESCE(SUM(duration_seconds), 0) AS total_seconds
        FROM runs
-       WHERE type = $type AND logged_at >= datetime('now', $days)`,
+       WHERE ${typeFilter} AND logged_at >= datetime('now', $days)`,
     )
-    .get({ type, days: `-${lookbackDays} days` }) as unknown as RunWeeklySummary;
+    .get(params as P) as unknown as RunWeeklySummary;
 }

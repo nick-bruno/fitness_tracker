@@ -89,6 +89,30 @@ db.exec(`
   ON runs (external_id) WHERE external_id IS NOT NULL
 `);
 
+// Migration: make distance_miles nullable (needed for misc activities like tennis/golf/pickleball)
+const runColInfo = db.prepare("PRAGMA table_info(runs)").all() as unknown as { name: string; notnull: number }[];
+const distCol = runColInfo.find(c => c.name === 'distance_miles');
+if (distCol && distCol.notnull === 1) {
+  db.exec(`
+    CREATE TABLE runs_nullable_dist (
+      id               INTEGER PRIMARY KEY AUTOINCREMENT,
+      type             TEXT NOT NULL DEFAULT 'run',
+      title            TEXT,
+      logged_at        TEXT NOT NULL DEFAULT (datetime('now')),
+      distance_miles   REAL,
+      duration_seconds INTEGER NOT NULL,
+      notes            TEXT,
+      source           TEXT NOT NULL DEFAULT 'manual',
+      external_id      TEXT
+    );
+    INSERT INTO runs_nullable_dist (id, type, title, logged_at, distance_miles, duration_seconds, notes, source, external_id)
+      SELECT id, type, title, logged_at, distance_miles, duration_seconds, notes, source, external_id FROM runs;
+    DROP TABLE runs;
+    ALTER TABLE runs_nullable_dist RENAME TO runs;
+    CREATE UNIQUE INDEX idx_runs_external_id_new ON runs (external_id) WHERE external_id IS NOT NULL;
+  `);
+}
+
 // Add title column to workouts if it doesn't exist yet (one-time migration)
 const workoutCols = db.prepare("PRAGMA table_info(workouts)").all() as unknown as { name: string }[];
 if (!workoutCols.some((c) => c.name === 'title')) {

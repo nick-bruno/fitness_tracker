@@ -2,12 +2,12 @@ import db from '../db';
 
 type P = Record<string, string | number | null | bigint>;
 
-function getWeekBounds(): { from: string; to: string } {
+function getWeekBounds(offsetWeeks = 0): { from: string; to: string } {
   const now = new Date();
   const day = now.getDay(); // 0=Sun
   const daysFromMonday = day === 0 ? 6 : day - 1;
   const monday = new Date(now);
-  monday.setDate(now.getDate() - daysFromMonday);
+  monday.setDate(now.getDate() - daysFromMonday + offsetWeeks * 7);
   monday.setHours(0, 0, 0, 0);
   const sunday = new Date(monday);
   sunday.setDate(monday.getDate() + 6);
@@ -15,9 +15,9 @@ function getWeekBounds(): { from: string; to: string } {
   return { from: monday.toISOString(), to: sunday.toISOString() };
 }
 
-// Ensure a weekly_goals row exists for the current week.
-// Seeds from the most recent previous week or the defaults table.
-function ensureCurrentWeek(from: string, to: string): { strength_goal: number; cardio_goal: number } {
+// Ensure a weekly_goals row exists for the given week.
+// Seeds from the most recent existing week or the defaults table.
+function ensureWeek(from: string, to: string): { strength_goal: number; cardio_goal: number } {
   const existing = db
     .prepare('SELECT strength_goal, cardio_goal FROM weekly_goals WHERE week_start = $from')
     .get({ from } as P) as unknown as { strength_goal: number; cardio_goal: number } | undefined;
@@ -60,9 +60,9 @@ export interface GoalsWithProgress {
   week_end: string;
 }
 
-export function getGoalsWithProgress(): GoalsWithProgress {
-  const { from, to } = getWeekBounds();
-  const goals = ensureCurrentWeek(from, to);
+export function getGoalsWithProgress(offsetWeeks = 0): GoalsWithProgress {
+  const { from, to } = getWeekBounds(offsetWeeks);
+  const goals = ensureWeek(from, to);
   return {
     strength_goal: goals.strength_goal,
     cardio_goal: goals.cardio_goal,
@@ -73,17 +73,19 @@ export function getGoalsWithProgress(): GoalsWithProgress {
   };
 }
 
-export function updateGoals(strength_goal: number, cardio_goal: number): GoalsWithProgress {
-  const { from, to } = getWeekBounds();
-  ensureCurrentWeek(from, to);
+export function updateGoals(strength_goal: number, cardio_goal: number, offsetWeeks = 0): GoalsWithProgress {
+  const { from, to } = getWeekBounds(offsetWeeks);
+  ensureWeek(from, to);
   db.prepare(
     'UPDATE weekly_goals SET strength_goal = $sg, cardio_goal = $cg WHERE week_start = $from'
   ).run({ sg: strength_goal, cg: cardio_goal, from } as P);
-  // Keep defaults table in sync so future weeks inherit this setting
-  db.prepare(
-    'UPDATE goals SET strength_goal = $sg, cardio_goal = $cg WHERE id = 1'
-  ).run({ sg: strength_goal, cg: cardio_goal } as P);
-  return getGoalsWithProgress();
+  // Only sync defaults for the current week so future weeks inherit it
+  if (offsetWeeks === 0) {
+    db.prepare(
+      'UPDATE goals SET strength_goal = $sg, cardio_goal = $cg WHERE id = 1'
+    ).run({ sg: strength_goal, cg: cardio_goal } as P);
+  }
+  return getGoalsWithProgress(offsetWeeks);
 }
 
 export interface WeekHistoryRecord {

@@ -24,6 +24,13 @@ const sections = [
       { to: '/rows',    label: 'Row History', icon: '≡' },
     ],
   },
+  {
+    label: 'Activities',
+    links: [
+      { to: '/log-activity', label: 'Log Activity', icon: '🏅' },
+      { to: '/activities',   label: 'History',      icon: '≡' },
+    ],
+  },
 ];
 
 export default function Sidebar() {
