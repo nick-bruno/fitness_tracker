@@ -2,7 +2,7 @@
 
 A personal, single-user fitness tracking web app with AI-powered workout recommendations via the Claude API.
 
-**Last active session:** 2026-06-14
+**Last active session:** 2026-07-05
 
 ---
 
@@ -187,14 +187,33 @@ Existing badge grid grouped by parent muscle (Chest, Back, …). Sits above `Bod
 
 ## Exercise Library
 
-~648 exercises total (63 seeded + ~585 from Wger public API).
+**1,903 exercises total** across three sources:
+- 63 hand-curated seed exercises
+- ~585 from the Wger public API
+- 1,254 new from the hasaneyldrm/exercises-dataset (41 existing records updated)
 
-**Wger import (`server/src/scripts/importWger.ts`):**
+### Import scripts
+
+**Wger import (`server/src/scripts/importWger.ts`)** — `npm run import-wger`
 - Fetches from `https://wger.de/api/v2/exerciseinfo/?language=2` (English only)
 - Maps Wger muscle IDs → our sub-muscle names, equipment names → our equipment strings, categories → movement patterns
 - Skips cardio exercises and exercises with no mappable muscles
 - Strips HTML from descriptions
 - `INSERT OR IGNORE` — safe to re-run; won't duplicate
+
+**exercises-dataset import (`server/src/scripts/importExerciseDataset.ts`)** — `npm run import-dataset`
+- Source: `https://github.com/hasaneyldrm/exercises-dataset` (1,324 exercises, JSON)
+- **Dataset takes deduplication priority** — exercises matched by name have their description, equipment, movement_pattern, and muscle groups overwritten with the dataset's version; new exercises are inserted
+- Skips `category: cardio` and `target: cardiovascular system`
+- Maps 28 equipment types → our 5 canonical values:
+  - `Barbell`: barbell, ez barbell, olympic barbell, smith machine, trap bar
+  - `Dumbbell`: dumbbell, kettlebell, hammer, weighted
+  - `Cable`: cable, band, resistance band, rope
+  - `Machine`: leverage machine, assisted, sled machine
+  - `Bodyweight`: body weight, bosu ball, medicine ball, roller, stability ball, tire, wheel roller
+- Maps 19 `target` values → primary muscle sub-group via `TARGET_MAP`
+- Maps 41 `secondary_muscles` labels → secondary sub-groups via `SECONDARY_MAP` (unmappable entries cleanly skipped)
+- Safe to re-run — produces 0 new inserts if dataset hasn't changed
 
 **Muscle group filter (`muscleGroupId` query param):**
 The filter subquery joins `muscle_groups` and checks `mg.id = $mgId OR mg.parent_id = $mgId` — so passing a top-level group ID (e.g., Chest) returns exercises tagged with any of its sub-muscles (Upper Pec, Mid/Sternal Pec, Lower Pec).
