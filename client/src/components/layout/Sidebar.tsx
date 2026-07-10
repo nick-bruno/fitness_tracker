@@ -31,6 +31,12 @@ const sections = [
       { to: '/activities',   label: 'History',      icon: '≡' },
     ],
   },
+  {
+    label: 'Integrations',
+    links: [
+      { to: '/fitbit', label: 'Fitbit Sync', icon: '⌚' },
+    ],
+  },
 ];
 
 export default function Sidebar() {

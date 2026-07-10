@@ -3,7 +3,7 @@ import type { Run, RunCreateInput, RunWeeklySummary } from '../types';
 
 type P = Record<string, string | number | null | bigint>;
 
-const MISC_TYPES_SQL = "('tennis', 'golf', 'pickleball')";
+const MISC_TYPES_SQL = "('tennis', 'golf', 'pickleball', 'cycle', 'swim', 'walk')";
 
 export function listRuns(opts: {
   limit: number;

@@ -10,6 +10,9 @@ import type {
   RunCreateInput,
   RunWeeklySummary,
   NrcImportResult,
+  FitbitStatus,
+  FitbitSyncResult,
+  DailySteps,
 } from '../types';
 
 const BASE = '/api';
@@ -140,6 +143,22 @@ export const updateGoals = (strength_goal: number, cardio_goal: number, week_off
 export const fetchGoalsHistory = (weeks = 12) =>
   request<{ history: import('../types').WeekHistoryRecord[] }>(`/goals/history?weeks=${weeks}`)
     .then((r) => r.history);
+
+// Fitbit
+export const fetchFitbitStatus = () =>
+  request<FitbitStatus>('/fitbit/status');
+
+export const fetchFitbitAuthUrl = () =>
+  request<{ url: string }>('/fitbit/auth-url').then((r) => r.url);
+
+export const triggerFitbitSync = () =>
+  request<FitbitSyncResult>('/fitbit/sync', { method: 'POST' });
+
+export const disconnectFitbit = () =>
+  request<{ success: boolean }>('/fitbit/disconnect', { method: 'DELETE' });
+
+export const fetchFitbitSteps = (days: number) =>
+  request<{ steps: DailySteps[] }>(`/fitbit/steps?days=${days}`).then((r) => r.steps);
 
 // Recommendations
 export const fetchRecommendation = (goals: string[], lookback_days: number) =>

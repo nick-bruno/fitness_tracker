@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { useWorkouts, useMuscleSummary } from '../hooks/useWorkouts';
 import { useRunsSummary } from '../hooks/useRuns';
+import { useFitbitSteps } from '../hooks/useFitbit';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import WorkoutSummaryCard from '../components/workout/WorkoutSummaryCard';
 import MuscleHeatmap from '../components/recommendations/MuscleHeatmap';
 import BodySilhouette from '../components/dashboard/BodySilhouette';
@@ -38,6 +40,14 @@ export default function DashboardPage() {
   const { data: muscleSummary, isLoading: loadingMuscles } = useMuscleSummary(7);
   const { data: runSummary } = useRunsSummary(7, 'run');
   const { data: rowSummary } = useRunsSummary(7, 'row');
+  const { data: stepsData } = useFitbitSteps(7);
+
+  const stepsChartData = (stepsData ?? []).map((d) => ({
+    day: new Date(d.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' }),
+    steps: d.steps,
+    isToday: d.date === new Date().toISOString().slice(0, 10),
+  }));
+  const showSteps = stepsChartData.some((d) => d.steps > 0);
 
   const workouts = workoutsData?.workouts ?? [];
   const thisWeekWorkouts = workouts.filter((w) => {
@@ -99,6 +109,35 @@ export default function DashboardPage() {
           />
         </div>
       </div>
+
+      {/* Daily steps — only shown when Fitbit steps data is available */}
+      {showSteps && (
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5 shadow-card animate-fade-up">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-base font-semibold text-[var(--text-1)]">Daily Steps</h2>
+            <span className="rounded-full bg-[var(--bg-subtle)] px-2.5 py-0.5 text-xs font-medium text-[var(--text-3)]">via Fitbit</span>
+          </div>
+          <ResponsiveContainer width="100%" height={120}>
+            <BarChart data={stepsChartData} barCategoryGap="30%">
+              <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'var(--text-3)' }} />
+              <YAxis hide />
+              <Tooltip
+                cursor={{ fill: 'var(--bg-hover)' }}
+                contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
+                formatter={(v: number) => [v.toLocaleString(), 'Steps']}
+              />
+              <Bar dataKey="steps" radius={[4, 4, 0, 0]}>
+                {stepsChartData.map((d, i) => (
+                  <Cell key={i} fill={d.isToday ? '#6366f1' : 'var(--bg-subtle)'} stroke={d.isToday ? '#4f46e5' : 'var(--border)'} strokeWidth={1} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+          <p className="mt-2 text-right text-xs text-[var(--text-3)]">
+            {stepsChartData.reduce((s, d) => s + d.steps, 0).toLocaleString()} steps this week
+          </p>
+        </div>
+      )}
 
       {/* Muscle coverage */}
       <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5 shadow-card animate-fade-up">

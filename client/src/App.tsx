@@ -9,6 +9,7 @@ import LogCardioPage from './pages/LogCardioPage';
 import CardioHistoryPage from './pages/CardioHistoryPage';
 import LogActivityPage from './pages/LogActivityPage';
 import ActivityHistoryPage from './pages/ActivityHistoryPage';
+import FitbitSettingsPage from './pages/FitbitSettingsPage';
 
 export default function App() {
   return (
@@ -31,6 +32,7 @@ export default function App() {
           <Route path="/log-activity" element={<LogActivityPage />} />
           <Route path="/log-activity/:activityId" element={<LogActivityPage />} />
           <Route path="/activities" element={<ActivityHistoryPage />} />
+          <Route path="/fitbit" element={<FitbitSettingsPage />} />
         </Routes>
       </AppShell>
     </BrowserRouter>

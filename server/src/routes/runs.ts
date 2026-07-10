@@ -4,7 +4,7 @@ import { listRuns, getRunById, createRun, updateRun, deleteRun, getRunsSummary }
 
 const router = Router();
 
-const MISC_ACTIVITY_TYPES = ['tennis', 'golf', 'pickleball'] as const;
+const MISC_ACTIVITY_TYPES = ['tennis', 'golf', 'pickleball', 'cycle', 'swim', 'walk'] as const;
 
 const RunSchema = z.discriminatedUnion('type', [
   z.object({

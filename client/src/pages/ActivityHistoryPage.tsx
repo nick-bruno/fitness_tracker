@@ -7,6 +7,9 @@ const ACTIVITY_META: Record<string, { label: string; emoji: string; colorCls: st
   tennis:     { label: 'Tennis',     emoji: '🎾', colorCls: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' },
   golf:       { label: 'Golf',       emoji: '⛳', colorCls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' },
   pickleball: { label: 'Pickleball', emoji: '🏓', colorCls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
+  cycle:      { label: 'Cycling',    emoji: '🚴', colorCls: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300' },
+  swim:       { label: 'Swimming',   emoji: '🏊', colorCls: 'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300' },
+  walk:       { label: 'Walking',    emoji: '🚶', colorCls: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300' },
 };
 
 function formatDuration(seconds: number): string {

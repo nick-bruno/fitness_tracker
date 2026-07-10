@@ -89,7 +89,7 @@ export interface WorkoutCreateInput {
   exercises: WorkoutExerciseInput[];
 }
 
-export type ActivityType = 'run' | 'row' | 'tennis' | 'golf' | 'pickleball';
+export type ActivityType = 'run' | 'row' | 'tennis' | 'golf' | 'pickleball' | 'cycle' | 'swim' | 'walk';
 
 export interface Run {
   id: number;
@@ -118,6 +118,23 @@ export interface NrcImportResult {
   imported: number;
   skipped: number;
   errors: string[];
+}
+
+export interface FitbitStatus {
+  connected: boolean;
+  lastSync: string | null;
+}
+
+export interface FitbitSyncResult {
+  imported: number;
+  skipped: number;
+  skippedTypes: string[];
+  errors: string[];
+}
+
+export interface DailySteps {
+  date: string;
+  steps: number;
 }
 
 export interface RunWeeklySummary {

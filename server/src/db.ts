@@ -154,4 +154,26 @@ db.exec(`
   )
 `);
 
+// Fitbit OAuth tokens (single-row table; id is always 1)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS fitbit_tokens (
+    id              INTEGER PRIMARY KEY DEFAULT 1,
+    access_token    TEXT NOT NULL,
+    refresh_token   TEXT NOT NULL,
+    expires_at      TEXT NOT NULL,
+    fitbit_user_id  TEXT NOT NULL,
+    last_synced_at  TEXT
+  )
+`);
+
+// Daily step counts synced from Fitbit
+db.exec(`
+  CREATE TABLE IF NOT EXISTS daily_steps (
+    id     INTEGER PRIMARY KEY AUTOINCREMENT,
+    date   TEXT NOT NULL UNIQUE,
+    steps  INTEGER NOT NULL,
+    source TEXT NOT NULL DEFAULT 'fitbit'
+  )
+`);
+
 export default db;

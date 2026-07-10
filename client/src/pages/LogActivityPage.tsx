@@ -4,9 +4,12 @@ import { useRun, useCreateRun, useUpdateRun } from '../hooks/useRuns';
 import type { ActivityType, RunCreateInput } from '../types';
 
 const ACTIVITY_OPTIONS: { type: ActivityType; label: string; emoji: string; color: string }[] = [
-  { type: 'tennis',    label: 'Tennis',    emoji: '🎾', color: 'indigo' },
-  { type: 'golf',      label: 'Golf',      emoji: '⛳', color: 'emerald' },
-  { type: 'pickleball',label: 'Pickleball',emoji: '🏓', color: 'amber' },
+  { type: 'tennis',     label: 'Tennis',     emoji: '🎾', color: 'indigo' },
+  { type: 'golf',       label: 'Golf',       emoji: '⛳', color: 'emerald' },
+  { type: 'pickleball', label: 'Pickleball', emoji: '🏓', color: 'amber' },
+  { type: 'cycle',      label: 'Cycling',    emoji: '🚴', color: 'sky' },
+  { type: 'swim',       label: 'Swimming',   emoji: '🏊', color: 'teal' },
+  { type: 'walk',       label: 'Walking',    emoji: '🚶', color: 'violet' },
 ];
 
 function toLocalDatetimeString(isoString: string): string {
@@ -34,8 +37,8 @@ export default function LogActivityPage() {
 
   useEffect(() => {
     if (existingRun) {
-      if (existingRun.type === 'tennis' || existingRun.type === 'golf' || existingRun.type === 'pickleball') {
-        setActivityType(existingRun.type);
+      if (ACTIVITY_OPTIONS.some(o => o.type === existingRun.type)) {
+        setActivityType(existingRun.type as ActivityType);
       }
       setLoggedAt(toLocalDatetimeString(existingRun.logged_at));
       const totalMins = Math.floor(existingRun.duration_seconds / 60);
@@ -109,9 +112,12 @@ export default function LogActivityPage() {
             {ACTIVITY_OPTIONS.map((opt) => {
               const active = activityType === opt.type;
               const colorMap: Record<string, string> = {
-                indigo: active ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : '',
+                indigo:  active ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : '',
                 emerald: active ? 'border-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' : '',
-                amber: active ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300' : '',
+                amber:   active ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300' : '',
+                sky:     active ? 'border-sky-400 bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300' : '',
+                teal:    active ? 'border-teal-400 bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300' : '',
+                violet:  active ? 'border-violet-400 bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300' : '',
               };
               return (
                 <button
