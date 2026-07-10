@@ -22,7 +22,6 @@ export default function FitbitSettingsPage() {
 
   const [syncResult, setSyncResult] = useState<FitbitSyncResult | null>(null);
   const [connecting, setConnecting] = useState(false);
-  const [instructionsOpen, setInstructionsOpen] = useState(false);
 
   useEffect(() => {
     if (justConnected || authError) {
@@ -188,46 +187,6 @@ export default function FitbitSettingsPage() {
         </div>
       )}
 
-      {/* Setup instructions */}
-      <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)]">
-        <button
-          onClick={() => setInstructionsOpen(o => !o)}
-          className="flex w-full items-center justify-between px-6 py-4 text-sm font-medium text-[var(--text-2)] hover:text-[var(--text-1)] transition-colors"
-        >
-          <span>{isConnected ? 'Setup reference' : 'How to connect — setup guide'}</span>
-          <span className="text-[var(--text-3)] text-xs">{instructionsOpen ? '▲' : '▼'}</span>
-        </button>
-
-        {instructionsOpen && (
-          <div className="border-t border-[var(--border)] px-6 pb-6 pt-4 space-y-4">
-            <p className="text-sm font-medium text-[var(--text-2)]">One-time developer app setup:</p>
-            <ol className="space-y-3 text-sm text-[var(--text-3)]">
-              <li className="flex gap-3">
-                <span className="flex-shrink-0 flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-xs font-bold text-indigo-600 dark:text-indigo-400">1</span>
-                <span>Go to <span className="font-mono text-[var(--text-2)]">dev.fitbit.com/apps/new</span> and register a free app. Set <strong>OAuth 2.0 Application Type</strong> to <strong>Server</strong>.</span>
-              </li>
-              <li className="flex gap-3">
-                <span className="flex-shrink-0 flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-xs font-bold text-indigo-600 dark:text-indigo-400">2</span>
-                <span>Set the <strong>Redirect URI</strong> to <span className="font-mono text-[var(--text-2)]">http://localhost:3001/api/fitbit/callback</span></span>
-              </li>
-              <li className="flex gap-3">
-                <span className="flex-shrink-0 flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-xs font-bold text-indigo-600 dark:text-indigo-400">3</span>
-                <span>Enable the <strong>Activity</strong> scope.</span>
-              </li>
-              <li className="flex gap-3">
-                <span className="flex-shrink-0 flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-xs font-bold text-indigo-600 dark:text-indigo-400">4</span>
-                <span>Copy the <strong>Client ID</strong> and <strong>Client Secret</strong> into your <span className="font-mono text-[var(--text-2)]">.env</span> file:</span>
-              </li>
-            </ol>
-            <pre className="rounded-lg bg-[var(--bg-subtle)] px-4 py-3 text-xs font-mono text-[var(--text-2)] overflow-x-auto">
-{`FITBIT_CLIENT_ID=your_client_id_here
-FITBIT_CLIENT_SECRET=your_client_secret_here
-FITBIT_REDIRECT_URI=http://localhost:3001/api/fitbit/callback`}
-            </pre>
-            <p className="text-xs text-[var(--text-3)]">Restart the server after adding the env vars, then click "Connect Fitbit" above.</p>
-          </div>
-        )}
-      </div>
     </div>
   );
 }

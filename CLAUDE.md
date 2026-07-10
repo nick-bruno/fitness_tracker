@@ -2,7 +2,7 @@
 
 A personal, single-user fitness tracking web app with AI-powered workout recommendations via the Claude API.
 
-**Last active session:** 2026-07-05
+**Last active session:** 2026-07-09
 
 ---
 
@@ -92,9 +92,11 @@ exercise_muscle_groups  exercise_id, muscle_group_id, role ('primary'|'secondary
 workouts             id, title, logged_at (ISO-8601), notes, location
 workout_exercises    id, workout_id, exercise_id, sort_order
 sets                 id, workout_exercise_id, set_number, reps, weight_lb, rpe, notes
-runs                 id, type ('run'|'row'), title, logged_at, distance_miles, duration_seconds, notes, source, external_id
+runs                 id, type ('run'|'row'|'tennis'|'golf'|'pickleball'|'cycle'|'swim'|'walk'), title, logged_at, distance_miles, duration_seconds, notes, source, external_id
 goals                id (always 1), strength_goal, cardio_goal   ← default weekly targets
 weekly_goals         id, week_start (ISO), week_end (ISO), strength_goal, cardio_goal
+fitbit_tokens        id (always 1), access_token, refresh_token, expires_at, fitbit_user_id, last_synced_at
+daily_steps          id, date (YYYY-MM-DD, UNIQUE), steps, source
 ```
 
 Seed data: ~33 muscle groups (6 top-level, ~27 sub-muscles) and ~63 seed exercises + ~585 imported from Wger. Run `npm run seed` once, then `npm run import-wger` to populate the full library.
@@ -137,6 +139,14 @@ Seed data: ~33 muscle groups (6 top-level, ~27 sub-muscles) and ~63 seed exercis
 | GET | `/api/goals` | Current week's goals + live completion counts |
 | PUT | `/api/goals` | Update current week's goals (also updates `goals` default) |
 | GET | `/api/goals/history` | Past weeks with goals + completions (`?weeks=12`) |
+| GET | `/api/fitbit/auth-url` | Returns Google OAuth authorization URL |
+| GET | `/api/fitbit/callback` | OAuth redirect handler — exchanges code, stores tokens, redirects to `/fitbit?connected=true` |
+| GET | `/api/fitbit/status` | `{ connected, lastSync }` |
+| POST | `/api/fitbit/sync` | Syncs last 30 days of activities + 7 days of steps; returns `{ imported, skipped, skippedTypes, errors }` |
+| DELETE | `/api/fitbit/disconnect` | Removes stored OAuth tokens |
+| GET | `/api/fitbit/steps` | Returns daily step counts (`?days=7`) |
+| GET | `/api/fitbit/debug` | Raw exercise data points from Google Health API (dev use) |
+| GET | `/api/fitbit/debug-steps` | Raw steps data points from Google Health API (dev use) |
 
 > **Route order matters:** `/api/workouts/muscle-summary` must be registered before `/api/workouts/:id`, `/api/runs/import/nrc` before `/api/runs/:id`, and `/api/goals/history` before `/api/goals` (implied by Express router order).
 
@@ -158,6 +168,10 @@ Seed data: ~33 muscle groups (6 top-level, ~27 sub-muscles) and ~63 seed exercis
 | Log Row | `/log-row` | Log a rowing activity |
 | Edit Row | `/log-row/:cardioId` | Edit an existing row |
 | Row History | `/rows` | Paginated row list with weekly summary |
+| Log Activity | `/log-activity` | Log a misc activity (Tennis, Golf, Pickleball, Cycling, Swimming, Walking) — duration only, no distance |
+| Edit Activity | `/log-activity/:activityId` | Edit an existing activity |
+| Activity History | `/activities` | Paginated list of misc activities with weekly summary |
+| Fitbit Sync | `/fitbit` | Google Health API connection status, Sync Now, Disconnect |
 
 `LogCardioPage` and `CardioHistoryPage` are shared components parameterized by `activityType: 'run' | 'row'`.
 
@@ -257,6 +271,59 @@ Prompt caching (`cache_control: { type: "ephemeral" }`) is applied to the system
 ```
 
 Recommendations are stateless and not persisted to the database.
+
+---
+
+## Fitbit Air — Google Health API Integration (`fitbitService.ts`)
+
+Fitbit (acquired by Google) now exposes device data through the **Google Health API v4** at `health.googleapis.com`. Auth goes through standard Google OAuth 2.0.
+
+### Setup (one-time)
+1. Create a Google Cloud project and enable the **Google Health API**.
+2. Create an OAuth 2.0 Web Application credential. Add `http://localhost:3001/api/fitbit/callback` as an authorized redirect URI.
+3. Add the scope `https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly` to the OAuth consent screen.
+4. Add your Gmail as a test user (consent screen → Test users) while the app is in Testing mode.
+5. Set in `.env`:
+   ```
+   FITBIT_CLIENT_ID=your_google_oauth_client_id
+   FITBIT_CLIENT_SECRET=your_google_oauth_client_secret
+   FITBIT_REDIRECT_URI=http://localhost:3001/api/fitbit/callback
+   ```
+
+### OAuth flow
+- `getAuthorizationUrl()` builds the Google consent URL with `access_type=offline&prompt=consent` (required to always receive a `refresh_token`).
+- `exchangeCodeForTokens()` POSTs to `https://oauth2.googleapis.com/token` with body params (not Basic auth — Google-specific).
+- Tokens stored in `fitbit_tokens` (single-row table, id=1). `getValidAccessToken()` auto-refreshes when within 5 minutes of expiry. Google does **not** rotate refresh tokens on refresh.
+
+### Data sync (`POST /api/fitbit/sync`)
+**Exercise sessions** — `GET /v4/users/me/dataTypes/exercise/dataPoints`
+- Filter: `exercise.interval.civil_start_time >= "YYYY-MM-DD"` (session types use `civil_start_time` with date-only format, NOT `start_time` with RFC-3339 — this is a critical distinction).
+- Response shape: each data point has `point.exercise.interval.startTime/endTime`, `point.exercise.exerciseType` (string enum e.g. `"TENNIS"`, `"RUNNING"`), `point.exercise.metricsSummary.distanceMillimeters`, `point.exercise.activeDuration` (e.g. `"1011s"`), `point.exercise.displayName`.
+- Distance converted: millimeters × 0.000000621371 = miles.
+- Duration: prefer `activeDuration` over wall-clock diff (excludes paused time).
+- Dedup key: `ghealth:{point.name}` stored as `external_id`.
+
+**Daily steps** — `GET /v4/users/me/dataTypes/steps/dataPoints`
+- Filter: `steps.interval.start_time >= "RFC-3339"` (interval types use `start_time`).
+- Aggregated by date and upserted into `daily_steps` table.
+- Shown as a 7-day Recharts `BarChart` on the Dashboard (today's bar = indigo, past = muted). Chart only renders when step data exists.
+
+### Activity type mapping
+`exerciseType` strings from Google Health → app `ActivityType`:
+```
+RUNNING / JOGGING / TREADMILL  → 'run'
+ROWING / ROWING_MACHINE        → 'row'
+BIKING / CYCLING / SPINNING    → 'cycle'
+SWIMMING                       → 'swim'
+WALKING / HIKING               → 'walk'
+TENNIS                         → 'tennis'
+GOLF                           → 'golf'
+PICKLEBALL                     → 'pickleball'
+```
+Name-based regex fallback handles unlisted types. Unrecognized types are collected in `skippedTypes` and returned in the sync result.
+
+### Activity types (`ActivityType`)
+Full union: `'run' | 'row' | 'tennis' | 'golf' | 'pickleball' | 'cycle' | 'swim' | 'walk'`. All types flow through the shared `runs` table. `MISC_TYPES_SQL` in `runsService.ts` and `MISC_ACTIVITY_TYPES` in `runs.ts` (Zod) must stay in sync when adding new types. Cardio goal counting has no type filter, so all types count automatically.
 
 ---
 
