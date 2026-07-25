@@ -112,7 +112,22 @@ async function getValidAccessToken(): Promise<string> {
     }),
   });
 
-  if (!res.ok) throw new Error('Failed to refresh access token — please reconnect');
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as { error?: string; error_description?: string };
+    if (err.error === 'invalid_grant') {
+      // Google expires refresh tokens after 7 days while the OAuth consent screen
+      // is in "Testing" publishing status. Publish the app to stop this recurring.
+      throw new Error(
+        'Refresh token expired or revoked — please reconnect. If this recurs weekly, ' +
+        'set the Google Cloud OAuth consent screen to "In production" (Testing-mode ' +
+        'refresh tokens expire after 7 days).'
+      );
+    }
+    throw new Error(
+      `Failed to refresh access token — please reconnect (${err.error ?? res.status}` +
+      `${err.error_description ? `: ${err.error_description}` : ''})`
+    );
+  }
 
   const data = await res.json() as { access_token: string; expires_in: number };
   storeTokens({
