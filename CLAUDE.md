@@ -167,7 +167,7 @@ Seed data: ~33 muscle groups (6 top-level, ~27 sub-muscles) and ~63 seed exercis
 |---|---|---|
 | Dashboard | `/` | Header "Sync Fitbit" button (`SyncFitbitButton` — syncs in place, shows last sync / new count / skipped types; links to `/fitbit` if not connected), weekly goals rings (lift/cardio/golf) + planning banner, daily steps chart (when Fitbit data exists). The "This Week" Strength/Running/Rowing stats, 7-Day Muscle Coverage (`MuscleHeatmap` + `BodySilhouette`) and Recent Workouts sections are commented out in `DashboardPage.tsx`, not deleted |
 | Weekly Tracker | `/weekly` | Predicted vs. actual week over week — hit rate, streak, prediction bias per category, chart, table |
-| Daily Journal | `/journal` | One entry per day: 1–10 rating + free text. Day navigation (no future dates), ⌘/Ctrl+Enter to save, unsaved-changes guard, past entries list with average rating |
+| Daily Journal | `/journal` | One entry per day: 1–10 rating + free text. Day navigation (no future dates), ⌘/Ctrl+Enter to save, unsaved-changes guard, rating trend chart (30d/90d/1y, one point per day with gaps for missing days, dashed period-average line, click a point to open that day), past entries list with average rating |
 | Exercise Library | `/exercises` | Search + filter by muscle group / equipment |
 | Log Workout | `/log` | Create workout — date+hour picker, gym location toggle, copy-from-previous, drag-to-reorder, Tab-to-add-set |
 | Edit Workout | `/log/:workoutId` | Pre-populates form from existing workout |
