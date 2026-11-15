@@ -4,14 +4,17 @@ import { getGoalsWithProgress, updateGoals, getGoalsHistory } from '../services/
 
 const router = Router();
 
+const goalValue = z.number().int().min(0).max(99).nullable();
+
 const GoalsSchema = z.object({
-  strength_goal: z.number().int().min(0).max(99),
-  cardio_goal: z.number().int().min(0).max(99),
+  strength_goal: goalValue,
+  cardio_goal: goalValue,
+  golf_goal: goalValue,
   week_offset: z.number().int().min(0).max(8).optional().default(0),
 });
 
 router.get('/history', (req, res) => {
-  const limit = Math.min(parseInt((req.query.weeks as string) ?? '12'), 52);
+  const limit = Math.max(1, Math.min(parseInt((req.query.weeks as string) ?? '12') || 12, 52));
   res.json({ history: getGoalsHistory(limit) });
 });
 
@@ -24,8 +27,8 @@ router.put('/', (req, res) => {
   const parsed = GoalsSchema.safeParse(req.body);
   if (!parsed.success)
     return res.status(400).json({ error: 'Invalid request', details: parsed.error.flatten() });
-  const { strength_goal, cardio_goal, week_offset } = parsed.data;
-  res.json({ goals: updateGoals(strength_goal, cardio_goal, week_offset) });
+  const { week_offset, ...goals } = parsed.data;
+  res.json({ goals: updateGoals(goals, week_offset) });
 });
 
 export default router;

@@ -2,7 +2,7 @@
 
 A personal, single-user fitness tracking web app with AI-powered workout recommendations via the Claude API.
 
-**Last active session:** 2026-07-09
+**Last active session:** 2026-11-14
 
 ---
 
@@ -93,8 +93,8 @@ workouts             id, title, logged_at (ISO-8601), notes, location
 workout_exercises    id, workout_id, exercise_id, sort_order
 sets                 id, workout_exercise_id, set_number, reps, weight_lb, rpe, notes
 runs                 id, type ('run'|'row'|'tennis'|'golf'|'pickleball'|'cycle'|'swim'|'walk'), title, logged_at, distance_miles, duration_seconds, notes, source, external_id
-goals                id (always 1), strength_goal, cardio_goal   ← default weekly targets
-weekly_goals         id, week_start (ISO), week_end (ISO), strength_goal, cardio_goal
+goals                id (always 1), strength_goal, cardio_goal   ← legacy, no longer read
+weekly_goals         id, week_start (ISO, UNIQUE), week_end (ISO), strength_goal, cardio_goal, golf_goal   ← all nullable (NULL = not predicted)
 fitbit_tokens        id (always 1), access_token, refresh_token, expires_at, fitbit_user_id, last_synced_at
 daily_steps          id, date (YYYY-MM-DD, UNIQUE), steps, source
 ```
@@ -109,6 +109,7 @@ Seed data: ~33 muscle groups (6 top-level, ~27 sub-muscles) and ~63 seed exercis
 3. Add `type` to `runs`
 4. Add `source` + `external_id` to `runs`
 5. Add `location` to `workouts`
+6. Rebuild `weekly_goals` with nullable goal columns + `golf_goal`
 
 ---
 
@@ -136,9 +137,9 @@ Seed data: ~33 muscle groups (6 top-level, ~27 sub-muscles) and ~63 seed exercis
 | PUT | `/api/runs/:id` | Edit existing run/row |
 | DELETE | `/api/runs/:id` | Delete run/row |
 | POST | `/api/runs/import/nrc` | Import NRC `.zip` export (multipart/form-data) |
-| GET | `/api/goals` | Current week's goals + live completion counts |
-| PUT | `/api/goals` | Update current week's goals (also updates `goals` default) |
-| GET | `/api/goals/history` | Past weeks with goals + completions (`?weeks=12`) |
+| GET | `/api/goals` | A week's goals + live completion counts (`?offset=0..8`, 0 = this week) |
+| PUT | `/api/goals` | Upsert a week's lift/cardio/golf goals (`week_offset` 0..8) |
+| GET | `/api/goals/history` | Every completed week (gap-free) with goals + completions (`?weeks=12`, max 52) |
 | GET | `/api/fitbit/auth-url` | Returns Google OAuth authorization URL |
 | GET | `/api/fitbit/callback` | OAuth redirect handler — exchanges code, stores tokens, redirects to `/fitbit?connected=true` |
 | GET | `/api/fitbit/status` | `{ connected, lastSync }` |
@@ -156,7 +157,8 @@ Seed data: ~33 muscle groups (6 top-level, ~27 sub-muscles) and ~63 seed exercis
 
 | Page | Route | Description |
 |---|---|---|
-| Dashboard | `/` | Weekly goals rings, weekly summary stats, body heatmap, muscle coverage, last 3 workouts |
+| Dashboard | `/` | Weekly goals rings (lift/cardio/golf) + planning banner, weekly summary stats, body heatmap, muscle coverage, last 3 workouts |
+| Weekly Tracker | `/weekly` | Predicted vs. actual week over week — hit rate, streak, prediction bias per category, chart, table |
 | Exercise Library | `/exercises` | Search + filter by muscle group / equipment |
 | Log Workout | `/log` | Create workout — date+hour picker, gym location toggle, copy-from-previous, drag-to-reorder, Tab-to-add-set |
 | Edit Workout | `/log/:workoutId` | Pre-populates form from existing workout |
@@ -180,7 +182,9 @@ Seed data: ~33 muscle groups (6 top-level, ~27 sub-muscles) and ~63 seed exercis
 ## Dashboard Components
 
 ### `WeeklyGoalsCard`
-Two SVG circular progress rings (indigo = strength, emerald = cardio) showing completed vs. goal for the current Mon–Sun week. Goals are stored per-week in `weekly_goals` — each new week auto-seeds from the most recent past week's goals. A collapsible history section shows past weeks with met/missed indicators. Refreshes every 60 seconds.
+Three SVG circular progress rings (indigo = lift, emerald = cardio, amber = golf) for the current Mon–Sun week, with week navigation up to 4 weeks ahead for planning. Shows `PlanningBanner` and links to `/weekly`. Refreshes every 60 seconds.
+
+Shared goal UI lives in `client/src/components/goals/`: `goalCategories.ts` (category metadata, colours, `computeStats`), `EditGoalsModal` (three steppers, prefilled from the existing goal → 4-week average → 0), and `PlanningBanner` (prompts when this week's goals aren't all set, or on Sunday when next week's aren't).
 
 ### `BodySilhouette`
 SVG front + back human body diagram with organic bezier muscle regions. Each region is colour-coded by the 7-day muscle summary (red = trained today → green = this week → dark = untrained). Hover shows a tooltip with muscle name, set count, and last trained date. Muscle → region mapping lives in `MUSCLE_TO_REGION` within the component.
@@ -238,13 +242,13 @@ The filter subquery joins `muscle_groups` and checks `mg.id = $mgId OR mg.parent
 
 ## Weekly Goals (`goalService.ts`)
 
-- `goals` table: single row (id=1), stores the default targets carried into new weeks.
-- `weekly_goals` table: one row per Mon–Sun week (`week_start` ISO = Monday 00:00:00 local, `week_end` = Sunday 23:59:59 local).
-- `ensureCurrentWeek()`: called on every `GET /api/goals` — creates the current week's row if absent, seeding from the most recent `weekly_goals` row (or `goals` defaults).
-- `updateGoals()`: UPSERTs `weekly_goals` for the current week AND updates `goals` so future weeks inherit the new targets.
-- `getGoalsHistory()`: correlated subquery counts workouts/runs within each stored week's bounds; marks `strength_met` and `cardio_met` booleans.
+The app is built around weekly predictions: on Sunday night you predict how many times you'll lift, do cardio, and golf in the coming week, then track predicted vs. actual week over week.
 
----
+- **Categories:** Lift = any row in `workouts`. Cardio = any row in `runs` **except** `type = 'golf'`. Golf = `runs.type = 'golf'`. Golf never counts toward cardio.
+- `weekly_goals`: one row per Mon–Sun week (`week_start` ISO = Monday 00:00:00 local, `week_end` = Sunday 23:59:59.999 local). Goal columns are nullable — **no auto-seeding** from prior weeks, so a NULL means "not predicted". `goals_set` is true only when all three are non-null.
+- Goals stay editable any time (current or future weeks), so a missed Sunday can be filled in mid-week.
+- `updateGoals()`: UPSERT on `week_start`.
+- `getGoalsHistory()`: walks back week by week (excluding the current week) to the earliest workout/run/goal, so weeks without goals still appear. `*_met` is `null` when no goal was set.
 
 ## AI Recommendations (`claudeService.ts`)
 

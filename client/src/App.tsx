@@ -10,6 +10,7 @@ import CardioHistoryPage from './pages/CardioHistoryPage';
 import LogActivityPage from './pages/LogActivityPage';
 import ActivityHistoryPage from './pages/ActivityHistoryPage';
 import FitbitSettingsPage from './pages/FitbitSettingsPage';
+import WeeklyTrackerPage from './pages/WeeklyTrackerPage';
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/weekly" element={<WeeklyTrackerPage />} />
           <Route path="/exercises" element={<ExerciseLibraryPage />} />
           <Route path="/log" element={<LogWorkoutPage />} />
           <Route path="/log/:workoutId" element={<LogWorkoutPage />} />

@@ -1,11 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchGoals, updateGoals, fetchGoalsHistory } from '../api/client';
+import type { WeeklyGoalValues } from '../types';
 
-export function useGoals(offset = 0) {
+export function useGoals(offset = 0, options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: ['goals', offset],
     queryFn: () => fetchGoals(offset),
     refetchInterval: offset === 0 ? 60_000 : false,
+    enabled: options.enabled ?? true,
   });
 }
 
@@ -19,10 +21,11 @@ export function useGoalsHistory(weeks = 12) {
 export function useUpdateGoals() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ strength_goal, cardio_goal, week_offset = 0 }: { strength_goal: number; cardio_goal: number; week_offset?: number }) =>
-      updateGoals(strength_goal, cardio_goal, week_offset),
-    onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: ['goals', vars.week_offset ?? 0] });
+    mutationFn: ({ goals, week_offset = 0 }: { goals: WeeklyGoalValues; week_offset?: number }) =>
+      updateGoals(goals, week_offset),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['goals'] });
+      qc.invalidateQueries({ queryKey: ['goals-history'] });
     },
   });
 }

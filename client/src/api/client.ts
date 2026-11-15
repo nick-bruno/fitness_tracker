@@ -134,10 +134,10 @@ export const importNrcRuns = async (file: File): Promise<NrcImportResult> => {
 export const fetchGoals = (offset = 0) =>
   request<{ goals: import('../types').GoalsWithProgress }>(`/goals${offset ? `?offset=${offset}` : ''}`).then((r) => r.goals);
 
-export const updateGoals = (strength_goal: number, cardio_goal: number, week_offset = 0) =>
+export const updateGoals = (goals: import('../types').WeeklyGoalValues, week_offset = 0) =>
   request<{ goals: import('../types').GoalsWithProgress }>('/goals', {
     method: 'PUT',
-    ...json({ strength_goal, cardio_goal, week_offset }),
+    ...json({ ...goals, week_offset }),
   }).then((r) => r.goals);
 
 export const fetchGoalsHistory = (weeks = 12) =>

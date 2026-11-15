@@ -143,16 +143,40 @@ if (!hasGoalRow) {
   db.prepare('INSERT INTO goals (id, strength_goal, cardio_goal) VALUES (1, 4, 3)').run();
 }
 
-// Per-week goal history — one row per Mon–Sun week
+// Per-week goal history — one row per Mon–Sun week.
+// Goals are nullable: NULL means "not predicted yet" (no auto-seeding from prior weeks).
 db.exec(`
   CREATE TABLE IF NOT EXISTS weekly_goals (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     week_start    TEXT NOT NULL UNIQUE,
     week_end      TEXT NOT NULL,
-    strength_goal INTEGER NOT NULL,
-    cardio_goal   INTEGER NOT NULL
+    strength_goal INTEGER,
+    cardio_goal   INTEGER,
+    golf_goal     INTEGER
   )
 `);
+
+// Migration: make goal columns nullable and add golf_goal (requires a table rebuild in SQLite)
+const weeklyGoalCols = db.prepare('PRAGMA table_info(weekly_goals)').all() as unknown as { name: string; notnull: number }[];
+const strengthGoalCol = weeklyGoalCols.find((c) => c.name === 'strength_goal');
+if (strengthGoalCol?.notnull === 1 || !weeklyGoalCols.some((c) => c.name === 'golf_goal')) {
+  db.exec(`
+    BEGIN;
+    CREATE TABLE weekly_goals_new (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      week_start    TEXT NOT NULL UNIQUE,
+      week_end      TEXT NOT NULL,
+      strength_goal INTEGER,
+      cardio_goal   INTEGER,
+      golf_goal     INTEGER
+    );
+    INSERT INTO weekly_goals_new (id, week_start, week_end, strength_goal, cardio_goal)
+      SELECT id, week_start, week_end, strength_goal, cardio_goal FROM weekly_goals;
+    DROP TABLE weekly_goals;
+    ALTER TABLE weekly_goals_new RENAME TO weekly_goals;
+    COMMIT;
+  `);
+}
 
 // Fitbit OAuth tokens (single-row table; id is always 1)
 db.exec(`

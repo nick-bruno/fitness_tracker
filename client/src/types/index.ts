@@ -137,27 +137,30 @@ export interface SuggestedExercise {
   rationale: string;
 }
 
-export interface Goals {
-  strength_goal: number;
-  cardio_goal: number;
+export type GoalCategory = 'strength' | 'cardio' | 'golf';
+
+/** A null goal means it hasn't been predicted for that week yet. */
+export interface WeeklyGoalValues {
+  strength_goal: number | null;
+  cardio_goal: number | null;
+  golf_goal: number | null;
 }
 
-export interface GoalsWithProgress extends Goals {
+export interface GoalsWithProgress extends WeeklyGoalValues {
   strength_completed: number;
   cardio_completed: number;
+  golf_completed: number;
   week_start: string;
   week_end: string;
+  /** True once all three goals are set for the week */
+  goals_set: boolean;
 }
 
-export interface WeekHistoryRecord {
-  week_start: string;
-  week_end: string;
-  strength_goal: number;
-  cardio_goal: number;
-  strength_completed: number;
-  cardio_completed: number;
-  strength_met: boolean;
-  cardio_met: boolean;
+export interface WeekHistoryRecord extends GoalsWithProgress {
+  /** null when no goal was set for that category */
+  strength_met: boolean | null;
+  cardio_met: boolean | null;
+  golf_met: boolean | null;
 }
 
 export interface RecommendationResponse {

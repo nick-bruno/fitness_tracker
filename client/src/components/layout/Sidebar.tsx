@@ -4,7 +4,10 @@ import { useTheme } from '../../hooks/useTheme';
 const sections = [
   {
     label: null,
-    links: [{ to: '/dashboard', label: 'Dashboard', icon: '◈' }],
+    links: [
+      { to: '/dashboard', label: 'Dashboard',      icon: '◈' },
+      { to: '/weekly',    label: 'Weekly Tracker', icon: '◎' },
+    ],
   },
   {
     label: 'Strength',

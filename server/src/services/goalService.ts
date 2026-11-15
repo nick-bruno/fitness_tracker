@@ -2,6 +2,7 @@ import db from '../db';
 
 type P = Record<string, string | number | null | bigint>;
 
+// Weeks run Monday 00:00 → Sunday 23:59:59 local time, stored as ISO (UTC) strings.
 function getWeekBounds(offsetWeeks = 0): { from: string; to: string } {
   const now = new Date();
   const day = now.getDay(); // 0=Sun
@@ -15,115 +16,116 @@ function getWeekBounds(offsetWeeks = 0): { from: string; to: string } {
   return { from: monday.toISOString(), to: sunday.toISOString() };
 }
 
-// Ensure a weekly_goals row exists for the given week.
-// Seeds from the most recent existing week or the defaults table.
-function ensureWeek(from: string, to: string): { strength_goal: number; cardio_goal: number } {
-  const existing = db
-    .prepare('SELECT strength_goal, cardio_goal FROM weekly_goals WHERE week_start = $from')
-    .get({ from } as P) as unknown as { strength_goal: number; cardio_goal: number } | undefined;
-  if (existing) return existing;
-
-  // Use most recent past week, else fall back to defaults table
-  const seed = (db
-    .prepare('SELECT strength_goal, cardio_goal FROM weekly_goals ORDER BY week_start DESC LIMIT 1')
-    .get() as unknown as { strength_goal: number; cardio_goal: number } | undefined)
-    ?? (db
-    .prepare('SELECT strength_goal, cardio_goal FROM goals WHERE id = 1')
-    .get() as unknown as { strength_goal: number; cardio_goal: number })
-    ?? { strength_goal: 4, cardio_goal: 3 };
-
-  db.prepare(
-    'INSERT INTO weekly_goals (week_start, week_end, strength_goal, cardio_goal) VALUES ($from, $to, $sg, $cg)'
-  ).run({ from, to, sg: seed.strength_goal, cg: seed.cardio_goal } as P);
-
-  return seed;
+export interface WeeklyGoalValues {
+  strength_goal: number | null;
+  cardio_goal: number | null;
+  golf_goal: number | null;
 }
 
-function countWorkouts(from: string, to: string): number {
-  return (db
-    .prepare('SELECT COUNT(*) AS c FROM workouts WHERE logged_at >= $from AND logged_at <= $to')
-    .get({ from, to } as P) as unknown as { c: number }).c;
-}
-
-function countCardio(from: string, to: string): number {
-  return (db
-    .prepare('SELECT COUNT(*) AS c FROM runs WHERE logged_at >= $from AND logged_at <= $to')
-    .get({ from, to } as P) as unknown as { c: number }).c;
-}
-
-export interface GoalsWithProgress {
-  strength_goal: number;
-  cardio_goal: number;
+interface Completions {
   strength_completed: number;
   cardio_completed: number;
-  week_start: string;
-  week_end: string;
+  golf_completed: number;
 }
 
-export function getGoalsWithProgress(offsetWeeks = 0): GoalsWithProgress {
+export interface GoalsWithProgress extends WeeklyGoalValues, Completions {
+  week_start: string;
+  week_end: string;
+  /** True once all three goals have been predicted for the week. */
+  goals_set: boolean;
+}
+
+export interface WeekHistoryRecord extends GoalsWithProgress {
+  /** null when no goal was set for that category */
+  strength_met: boolean | null;
+  cardio_met: boolean | null;
+  golf_met: boolean | null;
+}
+
+const EMPTY_GOALS: WeeklyGoalValues = { strength_goal: null, cardio_goal: null, golf_goal: null };
+
+function getGoalRow(weekStart: string): WeeklyGoalValues {
+  const row = db
+    .prepare('SELECT strength_goal, cardio_goal, golf_goal FROM weekly_goals WHERE week_start = $from')
+    .get({ from: weekStart } as P) as unknown as WeeklyGoalValues | undefined;
+  return row ?? EMPTY_GOALS;
+}
+
+// Lift = any logged workout. Cardio = any runs-table activity except golf. Golf = type 'golf'.
+function countCompletions(from: string, to: string): Completions {
+  const strength = (db
+    .prepare('SELECT COUNT(*) AS c FROM workouts WHERE logged_at >= $from AND logged_at <= $to')
+    .get({ from, to } as P) as unknown as { c: number }).c;
+
+  const runs = db
+    .prepare(`
+      SELECT
+        COALESCE(SUM(CASE WHEN type = 'golf' THEN 0 ELSE 1 END), 0) AS cardio,
+        COALESCE(SUM(CASE WHEN type = 'golf' THEN 1 ELSE 0 END), 0) AS golf
+      FROM runs
+      WHERE logged_at >= $from AND logged_at <= $to
+    `)
+    .get({ from, to } as P) as unknown as { cardio: number; golf: number };
+
+  return { strength_completed: strength, cardio_completed: runs.cardio, golf_completed: runs.golf };
+}
+
+function buildWeek(offsetWeeks: number): GoalsWithProgress {
   const { from, to } = getWeekBounds(offsetWeeks);
-  const goals = ensureWeek(from, to);
+  const goals = getGoalRow(from);
   return {
-    strength_goal: goals.strength_goal,
-    cardio_goal: goals.cardio_goal,
-    strength_completed: countWorkouts(from, to),
-    cardio_completed: countCardio(from, to),
+    ...goals,
+    ...countCompletions(from, to),
     week_start: from,
     week_end: to,
+    goals_set: goals.strength_goal !== null && goals.cardio_goal !== null && goals.golf_goal !== null,
   };
 }
 
-export function updateGoals(strength_goal: number, cardio_goal: number, offsetWeeks = 0): GoalsWithProgress {
+export function getGoalsWithProgress(offsetWeeks = 0): GoalsWithProgress {
+  return buildWeek(offsetWeeks);
+}
+
+export function updateGoals(goals: WeeklyGoalValues, offsetWeeks = 0): GoalsWithProgress {
   const { from, to } = getWeekBounds(offsetWeeks);
-  ensureWeek(from, to);
-  db.prepare(
-    'UPDATE weekly_goals SET strength_goal = $sg, cardio_goal = $cg WHERE week_start = $from'
-  ).run({ sg: strength_goal, cg: cardio_goal, from } as P);
-  // Only sync defaults for the current week so future weeks inherit it
-  if (offsetWeeks === 0) {
-    db.prepare(
-      'UPDATE goals SET strength_goal = $sg, cardio_goal = $cg WHERE id = 1'
-    ).run({ sg: strength_goal, cg: cardio_goal } as P);
-  }
-  return getGoalsWithProgress(offsetWeeks);
+  db.prepare(`
+    INSERT INTO weekly_goals (week_start, week_end, strength_goal, cardio_goal, golf_goal)
+    VALUES ($from, $to, $sg, $cg, $gg)
+    ON CONFLICT(week_start) DO UPDATE SET
+      strength_goal = excluded.strength_goal,
+      cardio_goal   = excluded.cardio_goal,
+      golf_goal     = excluded.golf_goal
+  `).run({ from, to, sg: goals.strength_goal, cg: goals.cardio_goal, gg: goals.golf_goal } as P);
+  return buildWeek(offsetWeeks);
 }
 
-export interface WeekHistoryRecord {
-  week_start: string;
-  week_end: string;
-  strength_goal: number;
-  cardio_goal: number;
-  strength_completed: number;
-  cardio_completed: number;
-  strength_met: boolean;
-  cardio_met: boolean;
-}
+const met = (completed: number, goal: number | null) => (goal === null ? null : completed >= goal);
 
+/**
+ * Completed weeks (most recent first), excluding the current week.
+ * Every calendar week is included — even ones without goals — back to the earliest
+ * recorded activity or goal, so the week-over-week view has no gaps.
+ */
 export function getGoalsHistory(limit = 12): WeekHistoryRecord[] {
-  const { from } = getWeekBounds();
+  const earliest = (db.prepare(`
+    SELECT MIN(d) AS d FROM (
+      SELECT MIN(logged_at) AS d FROM workouts
+      UNION ALL SELECT MIN(logged_at) FROM runs
+      UNION ALL SELECT MIN(week_start) FROM weekly_goals
+    )
+  `).get() as unknown as { d: string | null }).d;
+  if (!earliest) return [];
 
-  // Correlated subqueries count completions for each stored week
-  const rows = db.prepare(`
-    SELECT
-      wg.week_start, wg.week_end,
-      wg.strength_goal, wg.cardio_goal,
-      (SELECT COUNT(*) FROM workouts w
-       WHERE w.logged_at >= wg.week_start AND w.logged_at <= wg.week_end) AS strength_completed,
-      (SELECT COUNT(*) FROM runs r
-       WHERE r.logged_at >= wg.week_start AND r.logged_at <= wg.week_end) AS cardio_completed
-    FROM weekly_goals wg
-    WHERE wg.week_start < $from
-    ORDER BY wg.week_start DESC
-    LIMIT $limit
-  `).all({ from, limit } as P) as unknown as {
-    week_start: string; week_end: string;
-    strength_goal: number; cardio_goal: number;
-    strength_completed: number; cardio_completed: number;
-  }[];
-
-  return rows.map(r => ({
-    ...r,
-    strength_met: r.strength_completed >= r.strength_goal,
-    cardio_met: r.cardio_completed >= r.cardio_goal,
-  }));
+  const history: WeekHistoryRecord[] = [];
+  for (let i = 1; i <= limit; i++) {
+    const week = buildWeek(-i);
+    if (week.week_end < earliest) break;
+    history.push({
+      ...week,
+      strength_met: met(week.strength_completed, week.strength_goal),
+      cardio_met: met(week.cardio_completed, week.cardio_goal),
+      golf_met: met(week.golf_completed, week.golf_goal),
+    });
+  }
+  return history;
 }
