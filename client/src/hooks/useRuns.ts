@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchRuns, fetchRun, createRun, updateRun, deleteRun, fetchRunsSummary, importNrcRuns } from '../api/client';
-import type { RunCreateInput } from '../types';
+import { fetchRuns, fetchRun, createRun, updateRun, updateRunDetails, deleteRun, fetchRunsSummary, importNrcRuns } from '../api/client';
+import type { RunCreateInput, RunDetailsInput } from '../types';
 
 export function useRuns(params: { limit?: number; offset?: number; from?: string; to?: string; type?: string }) {
   return useQuery({
@@ -34,6 +34,17 @@ export function useUpdateRun() {
     mutationFn: ({ id, data }: { id: number; data: RunCreateInput }) => updateRun(id, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['runs'] });
+    },
+  });
+}
+
+export function useUpdateRunDetails() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: RunDetailsInput }) => updateRunDetails(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['runs'] });
+      qc.invalidateQueries({ queryKey: ['goals'] }); // refreshes the dashboard activity lists
     },
   });
 }

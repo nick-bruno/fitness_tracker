@@ -19,6 +19,7 @@ export function useSyncFitbit() {
       qc.invalidateQueries({ queryKey: ['fitbit-status'] });
       qc.invalidateQueries({ queryKey: ['fitbit-steps'] });
       qc.invalidateQueries({ queryKey: ['goals'] });
+      qc.invalidateQueries({ queryKey: ['goals-history'] });
     },
   });
 }

@@ -7,33 +7,36 @@ const sections = [
     links: [
       { to: '/dashboard', label: 'Dashboard',      icon: '◈' },
       { to: '/weekly',    label: 'Weekly Tracker', icon: '◎' },
+      { to: '/journal',   label: 'Daily Journal',  icon: '✎' },
     ],
   },
-  {
-    label: 'Strength',
-    links: [
-      { to: '/log',             label: 'Log Workout', icon: '＋' },
-      { to: '/history',         label: 'History',     icon: '≡' },
-      { to: '/exercises',       label: 'Exercises',   icon: '◯' },
-      { to: '/recommendations', label: 'AI Coach',    icon: '✦' },
-    ],
-  },
-  {
-    label: 'Cardio',
-    links: [
-      { to: '/log-run', label: 'Log Run',     icon: '→' },
-      { to: '/runs',    label: 'Run History', icon: '≡' },
-      { to: '/log-row', label: 'Log Row',     icon: '⟶' },
-      { to: '/rows',    label: 'Row History', icon: '≡' },
-    ],
-  },
-  {
-    label: 'Activities',
-    links: [
-      { to: '/log-activity', label: 'Log Activity', icon: '🏅' },
-      { to: '/activities',   label: 'History',      icon: '≡' },
-    ],
-  },
+  // Manual-logging sections — hidden now that activities come from Fitbit sync.
+  // The routes still exist in App.tsx; uncomment to restore the links.
+  // {
+  //   label: 'Strength',
+  //   links: [
+  //     { to: '/log',             label: 'Log Workout', icon: '＋' },
+  //     { to: '/history',         label: 'History',     icon: '≡' },
+  //     { to: '/exercises',       label: 'Exercises',   icon: '◯' },
+  //     { to: '/recommendations', label: 'AI Coach',    icon: '✦' },
+  //   ],
+  // },
+  // {
+  //   label: 'Cardio',
+  //   links: [
+  //     { to: '/log-run', label: 'Log Run',     icon: '→' },
+  //     { to: '/runs',    label: 'Run History', icon: '≡' },
+  //     { to: '/log-row', label: 'Log Row',     icon: '⟶' },
+  //     { to: '/rows',    label: 'Row History', icon: '≡' },
+  //   ],
+  // },
+  // {
+  //   label: 'Activities',
+  //   links: [
+  //     { to: '/log-activity', label: 'Log Activity', icon: '🏅' },
+  //     { to: '/activities',   label: 'History',      icon: '≡' },
+  //   ],
+  // },
   {
     label: 'Integrations',
     links: [

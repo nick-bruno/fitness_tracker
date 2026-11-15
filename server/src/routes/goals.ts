@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { getGoalsWithProgress, updateGoals, getGoalsHistory } from '../services/goalService';
+import { getGoalsWithProgress, updateGoals, getGoalsHistory, getWeekActivities } from '../services/goalService';
 
 const router = Router();
 
@@ -18,9 +18,14 @@ router.get('/history', (req, res) => {
   res.json({ history: getGoalsHistory(limit) });
 });
 
+const parseOffset = (raw: unknown) => Math.max(0, Math.min(8, parseInt((raw as string) ?? '0') || 0));
+
+router.get('/activities', (req, res) => {
+  res.json({ activities: getWeekActivities(parseOffset(req.query.offset)) });
+});
+
 router.get('/', (req, res) => {
-  const offset = Math.max(0, Math.min(8, parseInt((req.query.offset as string) ?? '0') || 0));
-  res.json({ goals: getGoalsWithProgress(offset) });
+  res.json({ goals: getGoalsWithProgress(parseOffset(req.query.offset)) });
 });
 
 router.put('/', (req, res) => {

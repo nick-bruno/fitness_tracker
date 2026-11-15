@@ -31,6 +31,7 @@ const WorkoutSchema = z.object({
   notes: z.string().optional(),
   location: z.string().optional(),
   exercises: z.array(WorkoutExerciseSchema).min(1),
+  activity_id: z.number().int().positive().optional(),
 });
 
 router.get('/muscle-summary', (req, res) => {

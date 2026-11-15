@@ -1,9 +1,9 @@
 import db from '../db';
-import type { Run, RunCreateInput, RunWeeklySummary } from '../types';
+import type { Run, RunCreateInput, RunDetailsInput, RunWeeklySummary } from '../types';
 
 type P = Record<string, string | number | null | bigint>;
 
-const MISC_TYPES_SQL = "('tennis', 'golf', 'pickleball', 'cycle', 'swim', 'walk')";
+const MISC_TYPES_SQL = "('tennis', 'golf', 'pickleball', 'cycle', 'swim', 'walk', 'strength', 'basketball', 'driving_range')";
 
 export function listRuns(opts: {
   limit: number;
@@ -95,6 +95,23 @@ export function updateRun(id: number, data: RunCreateInput): Run | undefined {
     notes: data.notes ?? null,
   });
 
+  return getRunById(id);
+}
+
+/** Partial update of user-editable details; leaves type, time, source and external_id alone. */
+export function updateRunDetails(id: number, data: RunDetailsInput): Run | undefined {
+  const existing = getRunById(id);
+  if (!existing) return undefined;
+  const merged = { ...existing, ...data };
+  db.prepare(
+    'UPDATE runs SET title = $title, duration_seconds = $duration_seconds, distance_miles = $distance_miles, notes = $notes WHERE id = $id'
+  ).run({
+    id,
+    title: merged.title ?? null,
+    duration_seconds: merged.duration_seconds,
+    distance_miles: merged.distance_miles ?? null,
+    notes: merged.notes ?? null,
+  } as P);
   return getRunById(id);
 }
 

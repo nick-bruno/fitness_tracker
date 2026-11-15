@@ -1,11 +1,21 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchGoals, updateGoals, fetchGoalsHistory } from '../api/client';
+import { fetchGoals, updateGoals, fetchGoalsHistory, fetchWeekActivities } from '../api/client';
 import type { WeeklyGoalValues } from '../types';
 
 export function useGoals(offset = 0, options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: ['goals', offset],
     queryFn: () => fetchGoals(offset),
+    refetchInterval: offset === 0 ? 60_000 : false,
+    enabled: options.enabled ?? true,
+  });
+}
+
+/** Sessions behind each goal count; key starts with 'goals' so goal/sync invalidations refresh it too. */
+export function useWeekActivities(offset = 0, options: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: ['goals', 'activities', offset],
+    queryFn: () => fetchWeekActivities(offset),
     refetchInterval: offset === 0 ? 60_000 : false,
     enabled: options.enabled ?? true,
   });

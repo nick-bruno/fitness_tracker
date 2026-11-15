@@ -51,23 +51,37 @@ function getGoalRow(weekStart: string): WeeklyGoalValues {
   return row ?? EMPTY_GOALS;
 }
 
-// Lift = any logged workout. Cardio = any runs-table activity except golf. Golf = type 'golf'.
+// Which runs-table activity types count toward each weekly goal (one session = one count).
+// Anything not listed (walk, swim, pickleball…) counts toward nothing.
+export const GOAL_ACTIVITY_TYPES = {
+  strength: ['strength'],                                        // Fitbit "Strength training" (+ manually logged workouts)
+  cardio:   ['run', 'basketball', 'cycle', 'row', 'tennis'],    // Run, Treadmill run, Basketball, Bike, Rowing, Tennis
+  golf:     ['golf', 'driving_range'],                           // Golf, Driving range
+} as const;
+
+const sqlList = (types: readonly string[]) => `(${types.map((t) => `'${t}'`).join(', ')})`;
+
 function countCompletions(from: string, to: string): Completions {
-  const strength = (db
-    .prepare('SELECT COUNT(*) AS c FROM workouts WHERE logged_at >= $from AND logged_at <= $to')
+  const workouts = (db
+    .prepare(`
+      SELECT COUNT(*) AS c FROM workouts
+      WHERE logged_at >= $from AND logged_at <= $to
+        AND id NOT IN (SELECT workout_id FROM runs WHERE workout_id IS NOT NULL) -- linked ones count via their activity
+    `)
     .get({ from, to } as P) as unknown as { c: number }).c;
 
   const runs = db
     .prepare(`
       SELECT
-        COALESCE(SUM(CASE WHEN type = 'golf' THEN 0 ELSE 1 END), 0) AS cardio,
-        COALESCE(SUM(CASE WHEN type = 'golf' THEN 1 ELSE 0 END), 0) AS golf
+        COALESCE(SUM(CASE WHEN type IN ${sqlList(GOAL_ACTIVITY_TYPES.strength)} THEN 1 ELSE 0 END), 0) AS strength,
+        COALESCE(SUM(CASE WHEN type IN ${sqlList(GOAL_ACTIVITY_TYPES.cardio)} THEN 1 ELSE 0 END), 0) AS cardio,
+        COALESCE(SUM(CASE WHEN type IN ${sqlList(GOAL_ACTIVITY_TYPES.golf)} THEN 1 ELSE 0 END), 0) AS golf
       FROM runs
       WHERE logged_at >= $from AND logged_at <= $to
     `)
-    .get({ from, to } as P) as unknown as { cardio: number; golf: number };
+    .get({ from, to } as P) as unknown as { strength: number; cardio: number; golf: number };
 
-  return { strength_completed: strength, cardio_completed: runs.cardio, golf_completed: runs.golf };
+  return { strength_completed: workouts + runs.strength, cardio_completed: runs.cardio, golf_completed: runs.golf };
 }
 
 function buildWeek(offsetWeeks: number): GoalsWithProgress {
@@ -128,4 +142,67 @@ export function getGoalsHistory(limit = 12): WeekHistoryRecord[] {
     });
   }
   return history;
+}
+
+export interface GoalActivity {
+  /** 'activity' = runs table (Fitbit or manual), 'workout' = manually logged strength workout */
+  kind: 'activity' | 'workout';
+  id: number;
+  type: string;
+  title: string | null;
+  logged_at: string;
+  duration_seconds: number | null;
+  distance_miles: number | null;
+  notes: string | null;
+  source: string;
+  /** Linked workout (strength details) — null when no details added */
+  workout_id: number | null;
+  workout_title: string | null;
+  exercise_names: string | null;
+  set_count: number | null;
+}
+
+export type WeekActivities = Record<'strength' | 'cardio' | 'golf', GoalActivity[]>;
+
+/** The individual sessions behind each weekly goal count, newest first. */
+export function getWeekActivities(offsetWeeks = 0): WeekActivities {
+  const { from, to } = getWeekBounds(offsetWeeks);
+  const allTypes = [...GOAL_ACTIVITY_TYPES.strength, ...GOAL_ACTIVITY_TYPES.cardio, ...GOAL_ACTIVITY_TYPES.golf];
+
+  // Per-workout summary: exercise names in order + total set count
+  const workoutSummary = (idExpr: string) => `
+    (SELECT GROUP_CONCAT(name, ', ') FROM (
+       SELECT e.name FROM workout_exercises we JOIN exercises e ON e.id = we.exercise_id
+       WHERE we.workout_id = ${idExpr} ORDER BY we.sort_order)) AS exercise_names,
+    (SELECT COUNT(*) FROM sets s JOIN workout_exercises we ON we.id = s.workout_exercise_id
+       WHERE we.workout_id = ${idExpr}) AS set_count`;
+
+  const runs = db.prepare(`
+    SELECT 'activity' AS kind, r.id, r.type, r.title, r.logged_at, r.duration_seconds, r.distance_miles,
+           r.notes, r.source, r.workout_id, w.title AS workout_title,
+           ${workoutSummary('r.workout_id')}
+    FROM runs r
+    LEFT JOIN workouts w ON w.id = r.workout_id
+    WHERE r.logged_at >= $from AND r.logged_at <= $to AND r.type IN ${sqlList(allTypes)}
+    ORDER BY r.logged_at DESC
+  `).all({ from, to } as P) as unknown as GoalActivity[];
+
+  // Manually logged workouts not attached to a synced activity
+  const workouts = db.prepare(`
+    SELECT 'workout' AS kind, w.id, 'strength' AS type, w.title, w.logged_at,
+           NULL AS duration_seconds, NULL AS distance_miles, w.notes, 'manual' AS source,
+           w.id AS workout_id, w.title AS workout_title,
+           ${workoutSummary('w.id')}
+    FROM workouts w
+    WHERE w.logged_at >= $from AND w.logged_at <= $to
+      AND w.id NOT IN (SELECT workout_id FROM runs WHERE workout_id IS NOT NULL)
+  `).all({ from, to } as P) as unknown as GoalActivity[];
+
+  const inList = (list: readonly string[]) => (a: GoalActivity) => list.includes(a.type);
+  return {
+    strength: [...runs.filter(inList(GOAL_ACTIVITY_TYPES.strength)), ...workouts]
+      .sort((a, b) => b.logged_at.localeCompare(a.logged_at)),
+    cardio: runs.filter(inList(GOAL_ACTIVITY_TYPES.cardio)),
+    golf: runs.filter(inList(GOAL_ACTIVITY_TYPES.golf)),
+  };
 }

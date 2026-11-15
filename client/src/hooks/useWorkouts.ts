@@ -36,6 +36,7 @@ export function useCreateWorkout() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['workouts'] });
       qc.invalidateQueries({ queryKey: ['muscle-summary'] });
+      qc.invalidateQueries({ queryKey: ['goals'] });
     },
   });
 }
@@ -47,6 +48,7 @@ export function useUpdateWorkout() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['workouts'] });
       qc.invalidateQueries({ queryKey: ['muscle-summary'] });
+      qc.invalidateQueries({ queryKey: ['goals'] });
     },
   });
 }
@@ -58,6 +60,7 @@ export function useDeleteWorkout() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['workouts'] });
       qc.invalidateQueries({ queryKey: ['muscle-summary'] });
+      qc.invalidateQueries({ queryKey: ['goals'] });
     },
   });
 }

@@ -87,9 +87,11 @@ export interface WorkoutCreateInput {
   notes?: string;
   location?: string;
   exercises: WorkoutExerciseInput[];
+  /** On create: link the new workout to this synced strength activity (runs.id) */
+  activity_id?: number;
 }
 
-export type ActivityType = 'run' | 'row' | 'tennis' | 'golf' | 'pickleball' | 'cycle' | 'swim' | 'walk';
+export type ActivityType = 'run' | 'row' | 'tennis' | 'golf' | 'pickleball' | 'cycle' | 'swim' | 'walk' | 'strength' | 'basketball' | 'driving_range';
 
 export interface Run {
   id: number;
@@ -101,6 +103,14 @@ export interface Run {
   notes: string | null;
   source: string;
   external_id: string | null;
+  workout_id: number | null;
+}
+
+export interface RunDetailsInput {
+  title?: string | null;
+  duration_seconds?: number;
+  distance_miles?: number | null;
+  notes?: string | null;
 }
 
 export interface RunCreateInput {

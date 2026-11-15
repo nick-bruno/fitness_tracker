@@ -92,11 +92,12 @@ exercise_muscle_groups  exercise_id, muscle_group_id, role ('primary'|'secondary
 workouts             id, title, logged_at (ISO-8601), notes, location
 workout_exercises    id, workout_id, exercise_id, sort_order
 sets                 id, workout_exercise_id, set_number, reps, weight_lb, rpe, notes
-runs                 id, type ('run'|'row'|'tennis'|'golf'|'pickleball'|'cycle'|'swim'|'walk'), title, logged_at, distance_miles, duration_seconds, notes, source, external_id
+runs                 id, type ('run'|'row'|'tennis'|'golf'|'pickleball'|'cycle'|'swim'|'walk'|'strength'|'basketball'|'driving_range'), title, logged_at, distance_miles, duration_seconds, notes, source, external_id, workout_id → workouts(id) ON DELETE SET NULL
 goals                id (always 1), strength_goal, cardio_goal   ← legacy, no longer read
 weekly_goals         id, week_start (ISO, UNIQUE), week_end (ISO), strength_goal, cardio_goal, golf_goal   ← all nullable (NULL = not predicted)
 fitbit_tokens        id (always 1), access_token, refresh_token, expires_at, fitbit_user_id, last_synced_at
 daily_steps          id, date (YYYY-MM-DD, UNIQUE), steps, source
+journal_entries      id, date (YYYY-MM-DD local, UNIQUE), rating (1–10, nullable), body, created_at, updated_at
 ```
 
 Seed data: ~33 muscle groups (6 top-level, ~27 sub-muscles) and ~63 seed exercises + ~585 imported from Wger. Run `npm run seed` once, then `npm run import-wger` to populate the full library.
@@ -110,6 +111,7 @@ Seed data: ~33 muscle groups (6 top-level, ~27 sub-muscles) and ~63 seed exercis
 4. Add `source` + `external_id` to `runs`
 5. Add `location` to `workouts`
 6. Rebuild `weekly_goals` with nullable goal columns + `golf_goal`
+7. Add `workout_id` to `runs` (links a synced strength session to its workout details)
 
 ---
 
@@ -125,7 +127,7 @@ Seed data: ~33 muscle groups (6 top-level, ~27 sub-muscles) and ~63 seed exercis
 | DELETE | `/api/exercises/:id` | Delete exercise |
 | GET | `/api/workouts` | Paginated history (`?limit=&offset=&from=&to=`) |
 | GET | `/api/workouts/:id` | Full workout detail with sets |
-| POST | `/api/workouts` | Log a new workout |
+| POST | `/api/workouts` | Log a new workout (optional `activity_id` links it to a synced strength session) |
 | PUT | `/api/workouts/:id` | Edit existing workout |
 | DELETE | `/api/workouts/:id` | Delete workout |
 | GET | `/api/workouts/muscle-summary` | Per-muscle set counts for a lookback window |
@@ -135,11 +137,17 @@ Seed data: ~33 muscle groups (6 top-level, ~27 sub-muscles) and ~63 seed exercis
 | GET | `/api/runs/:id` | Single run/row detail |
 | POST | `/api/runs` | Log a run or row |
 | PUT | `/api/runs/:id` | Edit existing run/row |
+| PATCH | `/api/runs/:id` | Partial edit of details on any activity, incl. Fitbit-synced: `title`, `duration_seconds`, `distance_miles`, `notes` |
 | DELETE | `/api/runs/:id` | Delete run/row |
 | POST | `/api/runs/import/nrc` | Import NRC `.zip` export (multipart/form-data) |
 | GET | `/api/goals` | A week's goals + live completion counts (`?offset=0..8`, 0 = this week) |
 | PUT | `/api/goals` | Upsert a week's lift/cardio/golf goals (`week_offset` 0..8) |
+| GET | `/api/goals/activities` | The individual sessions behind each goal count for a week (`?offset=0..8`) → `{ strength, cardio, golf }` |
 | GET | `/api/goals/history` | Every completed week (gap-free) with goals + completions (`?weeks=12`, max 52) |
+| GET | `/api/journal` | Journal entries, newest first (`?limit=30&offset=0`) → `{ entries, total }` |
+| GET | `/api/journal/:date` | One day's entry (`YYYY-MM-DD`) → `{ entry }` (`null` if none) |
+| PUT | `/api/journal/:date` | Upsert `{ rating: 1–10 \| null, body }` — needs a rating or non-empty text |
+| DELETE | `/api/journal/:date` | Delete a day's entry |
 | GET | `/api/fitbit/auth-url` | Returns Google OAuth authorization URL |
 | GET | `/api/fitbit/callback` | OAuth redirect handler — exchanges code, stores tokens, redirects to `/fitbit?connected=true` |
 | GET | `/api/fitbit/status` | `{ connected, lastSync }` |
@@ -157,8 +165,9 @@ Seed data: ~33 muscle groups (6 top-level, ~27 sub-muscles) and ~63 seed exercis
 
 | Page | Route | Description |
 |---|---|---|
-| Dashboard | `/` | Weekly goals rings (lift/cardio/golf) + planning banner, weekly summary stats, body heatmap, muscle coverage, last 3 workouts |
+| Dashboard | `/` | Header "Sync Fitbit" button (`SyncFitbitButton` — syncs in place, shows last sync / new count / skipped types; links to `/fitbit` if not connected), weekly goals rings (lift/cardio/golf) + planning banner, daily steps chart (when Fitbit data exists). The "This Week" Strength/Running/Rowing stats, 7-Day Muscle Coverage (`MuscleHeatmap` + `BodySilhouette`) and Recent Workouts sections are commented out in `DashboardPage.tsx`, not deleted |
 | Weekly Tracker | `/weekly` | Predicted vs. actual week over week — hit rate, streak, prediction bias per category, chart, table |
+| Daily Journal | `/journal` | One entry per day: 1–10 rating + free text. Day navigation (no future dates), ⌘/Ctrl+Enter to save, unsaved-changes guard, past entries list with average rating |
 | Exercise Library | `/exercises` | Search + filter by muscle group / equipment |
 | Log Workout | `/log` | Create workout — date+hour picker, gym location toggle, copy-from-previous, drag-to-reorder, Tab-to-add-set |
 | Edit Workout | `/log/:workoutId` | Pre-populates form from existing workout |
@@ -175,6 +184,8 @@ Seed data: ~33 muscle groups (6 top-level, ~27 sub-muscles) and ~63 seed exercis
 | Activity History | `/activities` | Paginated list of misc activities with weekly summary |
 | Fitbit Sync | `/fitbit` | Google Health API connection status, Sync Now, Disconnect |
 
+**Sidebar:** only Dashboard, Weekly Tracker, Daily Journal and Fitbit Sync are linked — activities come from Fitbit sync. The Strength/Cardio/Activities manual-logging links are commented out in `Sidebar.tsx`; their routes still work.
+
 `LogCardioPage` and `CardioHistoryPage` are shared components parameterized by `activityType: 'run' | 'row'`.
 
 ---
@@ -182,7 +193,11 @@ Seed data: ~33 muscle groups (6 top-level, ~27 sub-muscles) and ~63 seed exercis
 ## Dashboard Components
 
 ### `WeeklyGoalsCard`
-Three SVG circular progress rings (indigo = lift, emerald = cardio, amber = golf) for the current Mon–Sun week, with week navigation up to 4 weeks ahead for planning. Shows `PlanningBanner` and links to `/weekly`. Refreshes every 60 seconds.
+Three SVG circular progress rings (indigo = lift, emerald = cardio, amber = golf) for the current Mon–Sun week, with week navigation up to 4 weeks ahead for planning. Clicking a ring expands `GoalActivityList` with that week's sessions for the category (date/time, duration, distance, source, notes). Each row has an "Add details"/"Edit" button:
+- **Lift** → `LogWorkoutPage`. A Fitbit session without details opens `/log?activity=<runId>&at=<start ISO>`; saving creates a workout with `activity_id`, which sets `runs.workout_id`. Linked sessions open `/log/<workoutId>`. The list shows the workout title, exercise names and set count. A linked workout is counted once (via its activity), never twice.
+- **Cardio** → `EditActivityModal`: title, total time (h/m/s), distance, notes.
+- **Golf** → `EditActivityModal`: title + free-text details.
+Edits to synced activities persist: sync dedups on `external_id` and never overwrites existing rows. Shows `PlanningBanner` and links to `/weekly`. Refreshes every 60 seconds.
 
 Shared goal UI lives in `client/src/components/goals/`: `goalCategories.ts` (category metadata, colours, `computeStats`), `EditGoalsModal` (three steppers, prefilled from the existing goal → 4-week average → 0), and `PlanningBanner` (prompts when this week's goals aren't all set, or on Sunday when next week's aren't).
 
@@ -244,7 +259,11 @@ The filter subquery joins `muscle_groups` and checks `mg.id = $mgId OR mg.parent
 
 The app is built around weekly predictions: on Sunday night you predict how many times you'll lift, do cardio, and golf in the coming week, then track predicted vs. actual week over week.
 
-- **Categories:** Lift = any row in `workouts`. Cardio = any row in `runs` **except** `type = 'golf'`. Golf = `runs.type = 'golf'`. Golf never counts toward cardio.
+- **Categories** (`GOAL_ACTIVITY_TYPES` in `goalService.ts`, one session = one count):
+  - Lift = manually logged `workouts` + `runs.type = 'strength'` (Fitbit "Strength training")
+  - Cardio = `runs.type IN ('run', 'basketball', 'cycle', 'row', 'tennis')` (Run, Treadmill run, Basketball, Bike, Rowing, Tennis)
+  - Golf = `runs.type IN ('golf', 'driving_range')`
+  - Anything else (walk, swim, pickleball) counts toward no goal.
 - `weekly_goals`: one row per Mon–Sun week (`week_start` ISO = Monday 00:00:00 local, `week_end` = Sunday 23:59:59.999 local). Goal columns are nullable — **no auto-seeding** from prior weeks, so a NULL means "not predicted". `goals_set` is true only when all three are non-null.
 - Goals stay editable any time (current or future weeks), so a missed Sunday can be filled in mid-week.
 - `updateGoals()`: UPSERT on `week_start`.
@@ -322,12 +341,15 @@ SWIMMING                       → 'swim'
 WALKING / HIKING               → 'walk'
 TENNIS                         → 'tennis'
 GOLF                           → 'golf'
+DRIVING_RANGE                  → 'driving_range'
 PICKLEBALL                     → 'pickleball'
+BASKETBALL                     → 'basketball'
+STRENGTH_TRAINING / WEIGHTLIFTING → 'strength'
 ```
-Name-based regex fallback handles unlisted types. Unrecognized types are collected in `skippedTypes` and returned in the sync result.
+A `displayName` containing "driving range" always maps to `driving_range` (Google may report it as `GOLF`). Name-based regex fallback (checked against both `exerciseType` and `displayName`) handles unlisted types. Unrecognized types are collected in `skippedTypes` and returned in the sync result.
 
 ### Activity types (`ActivityType`)
-Full union: `'run' | 'row' | 'tennis' | 'golf' | 'pickleball' | 'cycle' | 'swim' | 'walk'`. All types flow through the shared `runs` table. `MISC_TYPES_SQL` in `runsService.ts` and `MISC_ACTIVITY_TYPES` in `runs.ts` (Zod) must stay in sync when adding new types. Cardio goal counting has no type filter, so all types count automatically.
+Full union: `'run' | 'row' | 'tennis' | 'golf' | 'pickleball' | 'cycle' | 'swim' | 'walk' | 'strength' | 'basketball' | 'driving_range'`. All types flow through the shared `runs` table. `MISC_TYPES_SQL` in `runsService.ts` and `MISC_ACTIVITY_TYPES` in `runs.ts` (Zod) must stay in sync when adding new types. Weekly goal counting uses explicit type lists (`GOAL_ACTIVITY_TYPES`), so a new type counts toward nothing until added there.
 
 ---
 

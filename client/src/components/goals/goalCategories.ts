@@ -15,17 +15,17 @@ export interface GoalCategoryMeta {
 export const GOAL_CATEGORIES: GoalCategoryMeta[] = [
   {
     key: 'strength', label: 'Lift', unit: 'lifts', icon: '💪',
-    description: 'Strength workouts logged',
+    description: 'Strength training sessions',
     track: ['#E0E7FF', '#1e1b4b'], fill: ['#6366F1', '#818CF8'], text: ['#4338CA', '#a5b4fc'],
   },
   {
     key: 'cardio', label: 'Cardio', unit: 'sessions', icon: '🏃',
-    description: 'Runs, rows, rides, swims, walks, tennis… (not golf)',
+    description: 'Run, treadmill, basketball, bike, rowing, tennis',
     track: ['#D1FAE5', '#022c22'], fill: ['#10B981', '#34D399'], text: ['#047857', '#6ee7b7'],
   },
   {
-    key: 'golf', label: 'Golf', unit: 'rounds', icon: '⛳',
-    description: 'Golf rounds logged',
+    key: 'golf', label: 'Golf', unit: 'sessions', icon: '⛳',
+    description: 'Golf rounds and driving range sessions',
     track: ['#FEF3C7', '#451a03'], fill: ['#F59E0B', '#FBBF24'], text: ['#B45309', '#fcd34d'],
   },
 ];

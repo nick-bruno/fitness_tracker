@@ -1,15 +1,17 @@
 import { useNavigate } from 'react-router-dom';
-import { useWorkouts, useMuscleSummary } from '../hooks/useWorkouts';
-import { useRunsSummary } from '../hooks/useRuns';
+// import { useWorkouts, useMuscleSummary } from '../hooks/useWorkouts'; // hidden dashboard section
+// import { useRunsSummary } from '../hooks/useRuns'; // hidden dashboard section
 import { useFitbitSteps } from '../hooks/useFitbit';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import WorkoutSummaryCard from '../components/workout/WorkoutSummaryCard';
-import MuscleHeatmap from '../components/recommendations/MuscleHeatmap';
-import BodySilhouette from '../components/dashboard/BodySilhouette';
+// import WorkoutSummaryCard from '../components/workout/WorkoutSummaryCard'; // hidden dashboard section
+// import MuscleHeatmap from '../components/recommendations/MuscleHeatmap'; // muscle coverage section hidden
+// import BodySilhouette from '../components/dashboard/BodySilhouette'; // muscle coverage section hidden
 import WeeklyGoalsCard from '../components/dashboard/WeeklyGoalsCard';
-import { StatSkeleton, WorkoutCardSkeleton } from '../components/shared/Skeleton';
-import ErrorBanner from '../components/shared/ErrorBanner';
+import SyncFitbitButton from '../components/dashboard/SyncFitbitButton';
+// import { WorkoutCardSkeleton } from '../components/shared/Skeleton'; // hidden dashboard section
+// import ErrorBanner from '../components/shared/ErrorBanner'; // hidden dashboard section
 
+// Helpers below are only used by the hidden "This Week" sections — kept for easy restore.
 function formatPace(durationSeconds: number, distanceMiles: number): string {
   if (distanceMiles === 0) return '--';
   const paceSeconds = durationSeconds / distanceMiles;
@@ -36,10 +38,10 @@ function SectionHeader({ label }: { label: string }) {
 
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const { data: workoutsData, isLoading: loadingWorkouts, error } = useWorkouts({ limit: 3, offset: 0 });
-  const { data: muscleSummary, isLoading: loadingMuscles } = useMuscleSummary(7);
-  const { data: runSummary } = useRunsSummary(7, 'run');
-  const { data: rowSummary } = useRunsSummary(7, 'row');
+  // const { data: workoutsData, isLoading: loadingWorkouts, error } = useWorkouts({ limit: 3, offset: 0 }); // hidden dashboard section
+  // const { data: muscleSummary, isLoading: loadingMuscles } = useMuscleSummary(7); // muscle coverage section hidden
+  // const { data: runSummary } = useRunsSummary(7, 'run'); // hidden dashboard section
+  // const { data: rowSummary } = useRunsSummary(7, 'row'); // hidden dashboard section
   const { data: stepsData } = useFitbitSteps(7);
 
   const stepsChartData = (stepsData ?? []).map((d) => ({
@@ -49,32 +51,30 @@ export default function DashboardPage() {
   }));
   const showSteps = stepsChartData.some((d) => d.steps > 0);
 
-  const workouts = workoutsData?.workouts ?? [];
-  const thisWeekWorkouts = workouts.filter((w) => {
-    const diff = (Date.now() - new Date(w.logged_at).getTime()) / (1000 * 60 * 60 * 24);
-    return diff <= 7;
-  });
+  // Hidden dashboard sections:
+  // const workouts = workoutsData?.workouts ?? [];
+  // const thisWeekWorkouts = workouts.filter((w) => {
+  //   const diff = (Date.now() - new Date(w.logged_at).getTime()) / (1000 * 60 * 60 * 24);
+  //   return diff <= 7;
+  // });
 
   return (
     <div className="mx-auto max-w-4xl space-y-8">
       {/* Page header */}
-      <div className="flex items-center justify-between animate-fade-up">
+      <div className="flex flex-wrap items-start justify-between gap-3 animate-fade-up">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-[var(--text-1)]">Dashboard</h1>
-          <p className="mt-0.5 text-sm text-[var(--text-3)]">Track your progress and plan your next session.</p>
+          <p className="mt-0.5 text-sm text-[var(--text-3)]">Your week at a glance — synced from Fitbit.</p>
         </div>
-        <button
-          onClick={() => navigate('/log')}
-          className="rounded-xl bg-gradient-to-b from-indigo-500 to-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 hover:from-indigo-400 hover:to-indigo-500 active:from-indigo-600 active:to-indigo-700 transition-all"
-        >
-          + Log Workout
-        </button>
+        <SyncFitbitButton />
       </div>
 
       {/* Weekly goals */}
       <WeeklyGoalsCard />
 
-      {/* Strength stats */}
+      {/* "This Week" stat sections — hidden so the dashboard shows only Weekly Goals. Uncomment to restore
+          (also restore the hooks and imports marked "hidden" above).
+      Strength stats:
       <div>
         <SectionHeader label="This Week — Strength" />
         <div className="grid grid-cols-3 gap-4 stagger">
@@ -84,7 +84,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Running stats */}
+      Running stats:
       <div>
         <SectionHeader label="This Week — Running" />
         <div className="grid grid-cols-3 gap-4 stagger">
@@ -97,7 +97,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Rowing stats */}
+      Rowing stats:
       <div>
         <SectionHeader label="This Week — Rowing" />
         <div className="grid grid-cols-3 gap-4 stagger">
@@ -109,6 +109,7 @@ export default function DashboardPage() {
           />
         </div>
       </div>
+      */}
 
       {/* Daily steps — only shown when Fitbit steps data is available */}
       {showSteps && (
@@ -139,7 +140,8 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Muscle coverage */}
+      {/* Muscle coverage — hidden while the dashboard focuses on overall health. Uncomment to restore
+          (also restore the MuscleHeatmap/BodySilhouette imports and the useMuscleSummary call above).
       <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5 shadow-card animate-fade-up">
         <h2 className="mb-4 text-base font-semibold text-[var(--text-1)]">7-Day Muscle Coverage</h2>
         {loadingMuscles ? (
@@ -162,8 +164,10 @@ export default function DashboardPage() {
           </>
         )}
       </div>
+      */}
 
-      {/* Recent workouts */}
+      {/* Recent Workouts — hidden so the dashboard shows only Weekly Goals. Uncomment to restore
+          (also restore the hooks and imports marked "hidden" above).
       <div>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-base font-semibold text-[var(--text-1)]">Recent Workouts</h2>
@@ -191,6 +195,7 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+      */}
     </div>
   );
 }

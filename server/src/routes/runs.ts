@@ -1,10 +1,10 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { listRuns, getRunById, createRun, updateRun, deleteRun, getRunsSummary } from '../services/runsService';
+import { listRuns, getRunById, createRun, updateRun, updateRunDetails, deleteRun, getRunsSummary } from '../services/runsService';
 
 const router = Router();
 
-const MISC_ACTIVITY_TYPES = ['tennis', 'golf', 'pickleball', 'cycle', 'swim', 'walk'] as const;
+const MISC_ACTIVITY_TYPES = ['tennis', 'golf', 'pickleball', 'cycle', 'swim', 'walk', 'strength', 'basketball', 'driving_range'] as const;
 
 const RunSchema = z.discriminatedUnion('type', [
   z.object({
@@ -57,6 +57,23 @@ router.put('/:id', (req, res) => {
   const parsed = RunSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Invalid request', details: parsed.error.flatten() });
   const run = updateRun(id, parsed.data);
+  if (!run) return res.status(404).json({ error: 'Run not found' });
+  res.json({ run });
+});
+
+// Partial edit of details on any activity (incl. Fitbit-synced ones): title, time, distance, notes
+const RunDetailsSchema = z.object({
+  title: z.string().max(200).nullable().optional(),
+  duration_seconds: z.number().int().positive().optional(),
+  distance_miles: z.number().min(0).nullable().optional(),
+  notes: z.string().max(5000).nullable().optional(),
+});
+
+router.patch('/:id', (req, res) => {
+  const id = parseInt(req.params.id);
+  const parsed = RunDetailsSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'Invalid request', details: parsed.error.flatten() });
+  const run = updateRunDetails(id, parsed.data);
   if (!run) return res.status(404).json({ error: 'Run not found' });
   res.json({ run });
 });

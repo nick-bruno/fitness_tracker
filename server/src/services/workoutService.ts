@@ -133,6 +133,11 @@ export function createWorkout(data: WorkoutCreateInput): WorkoutDetail {
     const workoutId = result.lastInsertRowid;
     insertExercisesAndSets(workoutId, data.exercises);
 
+    if (data.activity_id != null) {
+      db.prepare("UPDATE runs SET workout_id = $workoutId WHERE id = $activityId AND type = 'strength'")
+        .run({ workoutId, activityId: data.activity_id });
+    }
+
     db.exec('COMMIT');
     return getWorkoutById(workoutId)!;
   } catch (err) {

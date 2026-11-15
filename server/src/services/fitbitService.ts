@@ -173,11 +173,20 @@ const ACTIVITY_TYPE_MAP: Record<string, ActivityType> = {
   TREADMILL_WALKING: 'walk',
   TENNIS:            'tennis',
   GOLF:              'golf',
+  DRIVING_RANGE:     'driving_range',
+  GOLF_DRIVING_RANGE: 'driving_range',
   PICKLEBALL:        'pickleball',
+  BASKETBALL:        'basketball',
+  STRENGTH_TRAINING: 'strength',
+  WEIGHTLIFTING:     'strength',
+  WEIGHT_TRAINING:   'strength',
 };
 
 // Name-based fallback for unmapped type strings
 const NAME_MAP: Array<[RegExp, ActivityType]> = [
+  [/driving.?range/i, 'driving_range'], // before /golf/ so "Golf driving range" isn't plain golf
+  [/strength|weight/i, 'strength'],
+  [/basketball/i, 'basketball'],
   [/run|jog|treadmill/i, 'run'],
   [/row/i, 'row'],
   [/bik|cycl|spin/i, 'cycle'],
@@ -188,11 +197,15 @@ const NAME_MAP: Array<[RegExp, ActivityType]> = [
   [/pickleball/i, 'pickleball'],
 ];
 
-function mapActivityType(raw: string): ActivityType | null {
+function mapActivityType(raw: string, displayName = ''): ActivityType | null {
+  // The Fitbit app label wins for driving range, which Google may report under the generic GOLF type
+  if (/driving.?range/i.test(displayName)) return 'driving_range';
   const upper = raw.toUpperCase().replace(/[\s-]/g, '_');
   if (ACTIVITY_TYPE_MAP[upper]) return ACTIVITY_TYPE_MAP[upper];
-  for (const [pattern, type] of NAME_MAP) {
-    if (pattern.test(raw)) return type;
+  for (const candidate of [raw, displayName]) {
+    for (const [pattern, type] of NAME_MAP) {
+      if (pattern.test(candidate)) return type;
+    }
   }
   return null;
 }
@@ -268,7 +281,7 @@ export async function syncActivities(daysBack = 30): Promise<FitbitSyncResult> {
       if (!ex) continue;
 
       const rawType = ex.exerciseType ?? '';
-      const type = mapActivityType(rawType);
+      const type = mapActivityType(rawType, ex.displayName ?? '');
       if (!type) { skippedTypes.add(rawType || 'unknown'); continue; }
 
       const startTime = ex.interval?.startTime;

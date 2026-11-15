@@ -113,6 +113,12 @@ if (distCol && distCol.notnull === 1) {
   `);
 }
 
+// Link a synced activity (e.g. Fitbit "Strength training") to a workout holding its exercises/sets
+const runColsForLink = db.prepare('PRAGMA table_info(runs)').all() as unknown as { name: string }[];
+if (!runColsForLink.some((c) => c.name === 'workout_id')) {
+  db.exec('ALTER TABLE runs ADD COLUMN workout_id INTEGER REFERENCES workouts(id) ON DELETE SET NULL');
+}
+
 // Add title column to workouts if it doesn't exist yet (one-time migration)
 const workoutCols = db.prepare("PRAGMA table_info(workouts)").all() as unknown as { name: string }[];
 if (!workoutCols.some((c) => c.name === 'title')) {
@@ -197,6 +203,18 @@ db.exec(`
     date   TEXT NOT NULL UNIQUE,
     steps  INTEGER NOT NULL,
     source TEXT NOT NULL DEFAULT 'fitbit'
+  )
+`);
+
+// Daily journal — one entry per local calendar day
+db.exec(`
+  CREATE TABLE IF NOT EXISTS journal_entries (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    date        TEXT NOT NULL UNIQUE,           -- YYYY-MM-DD (local)
+    rating      INTEGER CHECK (rating BETWEEN 1 AND 10),
+    body        TEXT NOT NULL DEFAULT '',
+    created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    updated_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
   )
 `);
 

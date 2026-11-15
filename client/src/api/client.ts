@@ -112,6 +112,9 @@ export const createRun = (data: RunCreateInput) =>
 export const updateRun = (id: number, data: RunCreateInput) =>
   request<{ run: Run }>(`/runs/${id}`, { method: 'PUT', ...json(data) }).then((r) => r.run);
 
+export const updateRunDetails = (id: number, data: import('../types').RunDetailsInput) =>
+  request<{ run: Run }>(`/runs/${id}`, { method: 'PATCH', ...json(data) }).then((r) => r.run);
+
 export const deleteRun = (id: number) =>
   request<{ success: boolean }>(`/runs/${id}`, { method: 'DELETE' });
 
@@ -140,9 +143,26 @@ export const updateGoals = (goals: import('../types').WeeklyGoalValues, week_off
     ...json({ ...goals, week_offset }),
   }).then((r) => r.goals);
 
+export const fetchWeekActivities = (offset = 0) =>
+  request<{ activities: import('../types').WeekActivities }>(`/goals/activities?offset=${offset}`)
+    .then((r) => r.activities);
+
 export const fetchGoalsHistory = (weeks = 12) =>
   request<{ history: import('../types').WeekHistoryRecord[] }>(`/goals/history?weeks=${weeks}`)
     .then((r) => r.history);
+
+// Daily journal
+export const fetchJournalEntries = (limit = 30, offset = 0) =>
+  request<{ entries: import('../types').JournalEntry[]; total: number }>(`/journal?limit=${limit}&offset=${offset}`);
+
+export const fetchJournalEntry = (date: string) =>
+  request<{ entry: import('../types').JournalEntry | null }>(`/journal/${date}`).then((r) => r.entry);
+
+export const saveJournalEntry = (date: string, data: { rating: number | null; body: string }) =>
+  request<{ entry: import('../types').JournalEntry }>(`/journal/${date}`, { method: 'PUT', ...json(data) }).then((r) => r.entry);
+
+export const deleteJournalEntry = (date: string) =>
+  request<{ success: boolean }>(`/journal/${date}`, { method: 'DELETE' });
 
 // Fitbit
 export const fetchFitbitStatus = () =>

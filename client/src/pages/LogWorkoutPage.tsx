@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   DndContext,
   closestCenter,
@@ -205,13 +205,17 @@ export default function LogWorkoutPage() {
   const navigate = useNavigate();
   const { workoutId } = useParams<{ workoutId?: string }>();
   const editId = workoutId ? parseInt(workoutId) : undefined;
+  // Adding details to a Fitbit strength session: /log?activity=<runId>&at=<ISO start time>
+  const [searchParams] = useSearchParams();
+  const activityId = !editId && searchParams.get('activity') ? parseInt(searchParams.get('activity')!) : undefined;
+  const activityAt = searchParams.get('at');
 
   const { data: existingWorkout, isLoading: loadingExisting } = useWorkout(editId);
   const createMutation = useCreateWorkout();
   const updateMutation = useUpdateWorkout();
 
   const [title, setTitle] = useState('');
-  const [loggedAt, setLoggedAt] = useState(toDatetimeLocal(new Date().toISOString()));
+  const [loggedAt, setLoggedAt] = useState(toDatetimeLocal(activityAt ?? new Date().toISOString()));
   const [notes, setNotes] = useState('');
   const [location, setLocation] = useState('');
   const [exercises, setExercises] = useState<ExerciseBlock[]>([]);
@@ -295,6 +299,7 @@ export default function LogWorkoutPage() {
             rpe: s.rpe ? parseFloat(s.rpe) : undefined,
           })),
       })).filter((ex) => ex.sets.length > 0),
+      activity_id: activityId,
     };
 
     if (payload.exercises.length === 0) {
@@ -308,7 +313,7 @@ export default function LogWorkoutPage() {
       } else {
         await createMutation.mutateAsync(payload);
       }
-      navigate('/history');
+      navigate('/dashboard');
     } catch (err) {
       setSaveError((err as Error).message || 'Failed to save workout.');
     }
@@ -328,7 +333,7 @@ export default function LogWorkoutPage() {
     <div className="mx-auto max-w-2xl space-y-5">
       <div className="flex items-center justify-between animate-fade-up">
         <h1 className="text-3xl font-bold tracking-tight text-[var(--text-1)]">
-          {editId ? 'Edit Workout' : 'Log Workout'}
+          {editId ? 'Edit Workout' : activityId ? 'Strength Training Details' : 'Log Workout'}
         </h1>
         <button onClick={() => navigate(-1)} className="text-sm font-medium text-[var(--text-3)] hover:text-[var(--text-1)] transition-colors">
           ← Back

@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useGoals } from '../../hooks/useGoals';
+import { useGoals, useWeekActivities } from '../../hooks/useGoals';
+import type { GoalCategory } from '../../types';
 import LoadingSpinner from '../shared/LoadingSpinner';
 import EditGoalsModal from '../goals/EditGoalsModal';
 import PlanningBanner from '../goals/PlanningBanner';
+import GoalActivityList from '../goals/GoalActivityList';
 import {
   GOAL_CATEGORIES, type GoalCategoryMeta, completedOf, formatWeekRange, goalOf, isDarkMode,
 } from '../goals/goalCategories';
@@ -15,9 +17,11 @@ interface RingProps {
   completed: number;
   goal: number | null;
   planned?: boolean;
+  selected?: boolean;
+  onClick?: () => void;
 }
 
-function GoalRing({ meta, completed, goal, planned }: RingProps) {
+function GoalRing({ meta, completed, goal, planned, selected, onClick }: RingProps) {
   const r = 48;
   const circ = 2 * Math.PI * r;
   const progress = goal ? Math.min(completed / goal, 1) : 0;
@@ -36,7 +40,18 @@ function GoalRing({ meta, completed, goal, planned }: RingProps) {
       : `${completed} of ${goal} ${meta.unit}`;
 
   return (
-    <div className="flex flex-col items-center gap-3">
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!onClick}
+      aria-expanded={onClick ? !!selected : undefined}
+      title={onClick ? `Show ${meta.label.toLowerCase()} sessions` : undefined}
+      className={`flex flex-col items-center gap-3 rounded-xl border p-2 transition-colors disabled:cursor-default ${
+        selected
+          ? 'border-[var(--border-strong)] bg-[var(--bg-subtle)]'
+          : 'border-transparent enabled:hover:bg-[var(--bg-hover)]'
+      }`}
+    >
       <div className="relative w-full max-w-[120px]">
         <svg viewBox="0 0 120 120" className="h-auto w-full" role="img"
           aria-label={`${meta.label}: ${completed} of ${goal ?? 'no goal'}`}>
@@ -71,10 +86,13 @@ function GoalRing({ meta, completed, goal, planned }: RingProps) {
         )}
       </div>
       <div className="text-center">
-        <p className="text-sm font-semibold text-[var(--text-1)]">{meta.icon} {meta.label}</p>
+        <p className="text-sm font-semibold text-[var(--text-1)]">
+          {meta.icon} {meta.label}
+          {onClick && <span className="ml-1 text-[10px] text-[var(--text-3)]">{selected ? '▲' : '▼'}</span>}
+        </p>
         <p className="text-xs text-[var(--text-3)]">{sublabel}</p>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -92,8 +110,18 @@ export default function WeeklyGoalsCard() {
   const [weekOffset, setWeekOffset] = useState(0);
   const { data: goals, isLoading } = useGoals(weekOffset);
   const [editOffset, setEditOffset] = useState<number | null>(null);
+  const [selected, setSelected] = useState<GoalCategory | null>(null);
 
   const isFuture = weekOffset > 0;
+  const { data: activities, isLoading: loadingActivities } = useWeekActivities(weekOffset, {
+    enabled: selected !== null && !isFuture,
+  });
+  const selectedMeta = GOAL_CATEGORIES.find((c) => c.key === selected);
+
+  const changeWeek = (next: number) => {
+    setWeekOffset(next);
+    if (next > 0) setSelected(null); // nothing to list for future weeks
+  };
   const daysLeft = daysLeftInWeek();
 
   const weekLabel = weekOffset === 0 ? 'This week' : weekOffset === 1 ? 'Next week' : `In ${weekOffset} weeks`;
@@ -114,14 +142,14 @@ export default function WeeklyGoalsCard() {
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--bg-subtle)] px-1 py-0.5">
               <button
-                onClick={() => setWeekOffset((o) => Math.max(0, o - 1))}
+                onClick={() => changeWeek(Math.max(0, weekOffset - 1))}
                 disabled={weekOffset === 0}
                 className="flex h-6 w-6 items-center justify-center rounded text-[var(--text-3)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-1)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 title="Previous week"
               >‹</button>
               <span className="min-w-[64px] text-center text-xs font-medium text-[var(--text-2)]">{weekLabel}</span>
               <button
-                onClick={() => setWeekOffset((o) => Math.min(MAX_FUTURE_WEEKS, o + 1))}
+                onClick={() => changeWeek(Math.min(MAX_FUTURE_WEEKS, weekOffset + 1))}
                 disabled={weekOffset === MAX_FUTURE_WEEKS}
                 className="flex h-6 w-6 items-center justify-center rounded text-[var(--text-3)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-1)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 title="Next week"
@@ -149,10 +177,20 @@ export default function WeeklyGoalsCard() {
                 completed={isFuture ? 0 : completedOf(goals, c.key)}
                 goal={goalOf(goals, c.key)}
                 planned={isFuture}
+                selected={selected === c.key}
+                onClick={isFuture ? undefined : () => setSelected((s) => (s === c.key ? null : c.key))}
               />
             ))}
           </div>
         ) : null}
+
+        {selectedMeta && !isFuture && (
+          <GoalActivityList
+            meta={selectedMeta}
+            activities={activities?.[selectedMeta.key]}
+            loading={loadingActivities}
+          />
+        )}
 
         <div className="mt-4 border-t border-[var(--border)] pt-3 text-right">
           <Link to="/weekly" className="text-xs font-medium text-[var(--text-3)] hover:text-[var(--text-1)] transition-colors">

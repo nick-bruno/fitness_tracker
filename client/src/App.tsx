@@ -11,6 +11,7 @@ import LogActivityPage from './pages/LogActivityPage';
 import ActivityHistoryPage from './pages/ActivityHistoryPage';
 import FitbitSettingsPage from './pages/FitbitSettingsPage';
 import WeeklyTrackerPage from './pages/WeeklyTrackerPage';
+import JournalPage from './pages/JournalPage';
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/weekly" element={<WeeklyTrackerPage />} />
+          <Route path="/journal" element={<JournalPage />} />
           <Route path="/exercises" element={<ExerciseLibraryPage />} />
           <Route path="/log" element={<LogWorkoutPage />} />
           <Route path="/log/:workoutId" element={<LogWorkoutPage />} />

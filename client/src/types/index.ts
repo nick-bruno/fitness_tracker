@@ -61,8 +61,8 @@ export interface WorkoutSummary {
   exercise_names: string[];
 }
 
-export type ActivityType = 'run' | 'row' | 'tennis' | 'golf' | 'pickleball' | 'cycle' | 'swim' | 'walk';
-export const MISC_ACTIVITY_TYPES: ActivityType[] = ['tennis', 'golf', 'pickleball', 'cycle', 'swim', 'walk'];
+export type ActivityType = 'run' | 'row' | 'tennis' | 'golf' | 'pickleball' | 'cycle' | 'swim' | 'walk' | 'strength' | 'basketball' | 'driving_range';
+export const MISC_ACTIVITY_TYPES: ActivityType[] = ['tennis', 'golf', 'pickleball', 'cycle', 'swim', 'walk', 'strength', 'basketball', 'driving_range'];
 
 export interface Run {
   id: number;
@@ -74,6 +74,15 @@ export interface Run {
   notes: string | null;
   source: string;
   external_id: string | null;
+  workout_id: number | null;
+}
+
+/** Partial edit of an activity's details (PATCH /api/runs/:id) */
+export interface RunDetailsInput {
+  title?: string | null;
+  duration_seconds?: number;
+  distance_miles?: number | null;
+  notes?: string | null;
 }
 
 export interface RunCreateInput {
@@ -163,6 +172,26 @@ export interface WeekHistoryRecord extends GoalsWithProgress {
   golf_met: boolean | null;
 }
 
+export interface GoalActivity {
+  /** 'activity' = runs table (Fitbit or manual), 'workout' = manually logged strength workout */
+  kind: 'activity' | 'workout';
+  id: number;
+  type: ActivityType;
+  title: string | null;
+  logged_at: string;
+  duration_seconds: number | null;
+  distance_miles: number | null;
+  notes: string | null;
+  source: string;
+  /** Linked workout (strength details) — null when no details added */
+  workout_id: number | null;
+  workout_title: string | null;
+  exercise_names: string | null;
+  set_count: number | null;
+}
+
+export type WeekActivities = Record<GoalCategory, GoalActivity[]>;
+
 export interface RecommendationResponse {
   target_muscle_groups: TargetMuscleGroup[];
   suggested_exercises: SuggestedExercise[];
@@ -189,4 +218,16 @@ export interface WorkoutCreateInput {
   notes?: string;
   location?: string;
   exercises: WorkoutExerciseInput[];
+  /** On create: link the new workout to this synced strength activity */
+  activity_id?: number;
+}
+
+export interface JournalEntry {
+  id: number;
+  /** Local calendar day, YYYY-MM-DD */
+  date: string;
+  rating: number | null;
+  body: string;
+  created_at: string;
+  updated_at: string;
 }

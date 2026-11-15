@@ -179,7 +179,7 @@ export default function FitbitSettingsPage() {
           <div className="text-xs text-[var(--text-3)] space-y-1">
             <p className="font-medium text-[var(--text-2)]">What gets synced:</p>
             <ul className="list-inside list-disc space-y-0.5">
-              <li>Runs, rows, cycling, swimming, walking, tennis, golf, pickleball</li>
+              <li>Runs, rows, cycling, swimming, walking, tennis, basketball, golf, driving range, pickleball, strength training</li>
               <li>Daily step counts (last 7 days) — visible on the Dashboard</li>
               <li>Duplicate activities are automatically skipped</li>
             </ul>
