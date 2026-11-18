@@ -320,7 +320,7 @@ Fitbit (acquired by Google) now exposes device data through the **Google Health 
 
 ### Data sync (`POST /api/fitbit/sync`)
 **Exercise sessions** — `GET /v4/users/me/dataTypes/exercise/dataPoints`
-- Filter: `exercise.interval.civil_start_time >= "YYYY-MM-DD"` (session types use `civil_start_time` with date-only format, NOT `start_time` with RFC-3339 — this is a critical distinction).
+- Filter: `exercise.interval.civil_start_time >= "YYYY-MM-DD"` (session types use `civil_start_time` with date-only format, NOT `start_time` with RFC-3339 — this is a critical distinction). `civil_start_time` is local wall-clock time, so bounds are **local** dates and the end bound is *tomorrow* (exclusive) — using today's UTC date as the end silently drops same-day sessions until ~7 PM Eastern (`civilDateRange()`).
 - Response shape: each data point has `point.exercise.interval.startTime/endTime`, `point.exercise.exerciseType` (string enum e.g. `"TENNIS"`, `"RUNNING"`), `point.exercise.metricsSummary.distanceMillimeters`, `point.exercise.activeDuration` (e.g. `"1011s"`), `point.exercise.displayName`.
 - Distance converted: millimeters × 0.000000621371 = miles.
 - Duration: prefer `activeDuration` over wall-clock diff (excludes paused time).

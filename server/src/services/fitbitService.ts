@@ -237,11 +237,22 @@ interface HealthDataPoint {
 // Interval types (steps) use start_time with RFC-3339 format.
 const SESSION_TYPES = new Set(['exercise']);
 
+/** Local calendar date (YYYY-MM-DD) — civil_start_time is the user's local wall-clock time, not UTC. */
+function localDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** [start, end) civil-date bounds; end is the day AFTER endIso so sessions from today are included. */
+function civilDateRange(startIso: string, endIso: string): { startDate: string; endDate: string } {
+  const end = new Date(endIso);
+  end.setDate(end.getDate() + 1);
+  return { startDate: localDate(new Date(startIso)), endDate: localDate(end) };
+}
+
 async function fetchHealthDataPoints(accessToken: string, dataType: string, startIso: string, endIso: string): Promise<HealthDataPoint[]> {
   let filter: string;
   if (SESSION_TYPES.has(dataType)) {
-    const startDate = startIso.slice(0, 10);
-    const endDate = endIso.slice(0, 10);
+    const { startDate, endDate } = civilDateRange(startIso, endIso);
     filter = `${dataType}.interval.civil_start_time >= "${startDate}" AND ${dataType}.interval.civil_start_time < "${endDate}"`;
   } else {
     filter = `${dataType}.interval.start_time >= "${startIso}" AND ${dataType}.interval.start_time < "${endIso}"`;
@@ -386,8 +397,10 @@ export async function debugSteps(daysBack = 7): Promise<unknown> {
 
 export async function debugSessions(daysBack = 30): Promise<unknown> {
   const accessToken = await getValidAccessToken();
-  const startDate = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  const endDate = new Date().toISOString().slice(0, 10);
+  const { startDate, endDate } = civilDateRange(
+    new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000).toISOString(),
+    new Date().toISOString(),
+  );
   const filter = `exercise.interval.civil_start_time >= "${startDate}" AND exercise.interval.civil_start_time < "${endDate}"`;
   const url = `${HEALTH_API_BASE}/dataTypes/exercise/dataPoints?${new URLSearchParams({ filter, pageSize: '10' })}`;
   const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
